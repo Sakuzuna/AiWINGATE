@@ -33,9 +33,9 @@ app.post('/generate', async (req, res) => {
     try {
         console.log('Making request to AI/ML API...');
         const response = await axios.post('https://api.aimlapi.com/v1/chat/completions', {
-            model: 'meta-llama/Llama-3-8b-chat-hf', // Updated to a valid model from the error options
+            model: 'meta-llama/Llama-3-8b-chat-hf', // Valid model from previous fix
             messages: [{ role: 'user', content: prompt }],
-            max_tokens: 1000, // Limit response length
+            max_tokens: 512, // Reduced to comply with free tier limit
             temperature: 0.7, // Control creativity
         }, {
             headers: {
