@@ -18,16 +18,29 @@
     <script>
         document.getElementById('generate').addEventListener('click', async () => {
             const prompt = document.getElementById('prompt').value;
-            const response = await fetch('/generate', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ prompt })
-            });
+            const answerBox = document.getElementById('answer-box');
+            answerBox.innerText = 'Generating...';
 
-            const data = await response.json();
-            document.getElementById('answer-box').innerText = data.answer || 'Error generating response';
+            try {
+                const response = await fetch('/generate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ prompt })
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.answer) {
+                    answerBox.innerText = data.answer;
+                } else {
+                    answerBox.innerText = data.error || 'Error generating response';
+                }
+            } catch (error) {
+                answerBox.innerText = 'Failed to connect to the server. Please try again.';
+                console.error('Front-end error:', error);
+            }
         });
     </script>
 </body>
