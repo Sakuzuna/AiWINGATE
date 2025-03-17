@@ -35,7 +35,7 @@
                 if (response.ok && data.answer) {
                     answerBox.innerText = data.answer;
                 } else {
-                    answerBox.innerText = data.error || 'Error generating response';
+                    answerBox.innerText = data.error || 'Unknown error occurred';
                 }
             } catch (error) {
                 answerBox.innerText = 'Failed to connect to the server. Please try again.';
