@@ -1,7 +1,7 @@
 {
   "name": "wingate-ai",
   "version": "1.0.0",
-  "description": "Wingate AI",
+  "description": "A simple AI website using DeepSeek API",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
