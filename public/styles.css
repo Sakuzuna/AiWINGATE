@@ -27,7 +27,9 @@ body {
 }
 
 .screen-1 .logo {
-    margin-top: -3em;
+    margin-top: -1em; /* Changed from -3em to -1em to lower the logo */
+    width: 150px; /* Increased from default (or implicit) size to 150px */
+    height: auto; /* Maintain aspect ratio */
     align-self: center;
 }
 
