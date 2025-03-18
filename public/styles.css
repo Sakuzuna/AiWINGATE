@@ -1,32 +1,45 @@
 body {
     font-family: Arial, sans-serif;
-    background-color: white;
-    color: black;
-    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    margin: 0;
+    background-color: #f0f0f0;
 }
 
 .container {
-    max-width: 600px;
-    margin: 0 auto;
+    text-align: center;
+    background-color: #fff;
     padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
 }
 
 .logo {
     width: 100px;
-    height: auto;
+    margin-bottom: 20px;
+}
+
+h1 {
+    margin-bottom: 20px;
 }
 
 input {
-    width: 80%;
     padding: 10px;
-    margin: 10px 0;
+    width: 300px;
+    margin-bottom: 20px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
 }
 
 button {
     padding: 10px 20px;
-    background-color: #007BFF;
-    color: white;
+    background-color: #007bff;
+    color: #fff;
     border: none;
+    border-radius: 5px;
     cursor: pointer;
 }
 
@@ -38,4 +51,29 @@ button:hover {
     margin-top: 20px;
     padding: 10px;
     border: 1px solid #ccc;
+    border-radius: 5px;
+    min-height: 50px;
+    width: 300px;
+    text-align: left;
+}
+
+/* New styles for the disclaimer */
+.disclaimer {
+    margin-top: 30px;
+    padding: 15px;
+    background-color: #fff3cd;
+    border: 1px solid #ffeeba;
+    border-radius: 5px;
+    max-width: 600px;
+    text-align: center;
+    font-size: 14px;
+    color: #856404;
+}
+
+.disclaimer p {
+    margin: 0;
+}
+
+.disclaimer strong {
+    color: #d63333; /* Red color for emphasis */
 }
