@@ -22,7 +22,7 @@ app.get('/', (req, res) => {
 
 app.post('/generate', async (req, res) => {
     console.log('Received body:', req.body); // Debug the incoming body
-    const { message } = req.body; // Changed from { prompt } to { message }
+    const { message } = req.body;
     if (!message) {
         return res.status(400).json({ error: 'No message provided' });
     }
@@ -34,7 +34,8 @@ app.post('/generate', async (req, res) => {
 
     try {
         const response = await axios.post('https://api.aimlapi.com/v1/chat/completions', {
-            message: message, // Use the message field
+            model: 'meta-llama/Llama-3-8b-chat-hf', // Confirmed valid model from the list
+            message: message,
             max_tokens: 512,
             temperature: 0.7,
         }, {
@@ -69,6 +70,7 @@ app.post('/upload', upload.single('file'), async (req, res) => {
 
     try {
         const response = await axios.post('https://api.aimlapi.com/v1/chat/completions', {
+            model: 'meta-llama/Llama-3-8b-chat-hf', // Confirmed valid model from the list
             message: message,
             max_tokens: 512,
             temperature: 0.7,
