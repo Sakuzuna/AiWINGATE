@@ -21,7 +21,7 @@ app.get('/', (req, res) => {
 });
 
 app.post('/generate', async (req, res) => {
-    console.log('Received body:', req.body); // Debug the incoming body
+    console.log('Received body:', req.body);
     const { message } = req.body;
     if (!message) {
         return res.status(400).json({ error: 'No message provided' });
@@ -34,8 +34,13 @@ app.post('/generate', async (req, res) => {
 
     try {
         const response = await axios.post('https://api.aimlapi.com/v1/chat/completions', {
-            model: 'meta-llama/Llama-3-8b-chat-hf', // Confirmed valid model from the list
-            message: message,
+            model: 'meta-llama/Llama-3-8b-chat-hf',
+            messages: [ // Changed from 'message' to 'messages' array
+                {
+                    role: 'user',
+                    content: message
+                }
+            ],
             max_tokens: 512,
             temperature: 0.7,
         }, {
@@ -45,10 +50,9 @@ app.post('/generate', async (req, res) => {
             }
         });
 
-        // Debug the full response
         console.log('API Response:', response.data);
 
-        const answer = response.data.choices?.[0]?.text || response.data.answer || response.data.response || 'No valid response';
+        const answer = response.data.choices?.[0]?.message?.content || response.data.answer || response.data.response || 'No valid response';
         res.json({ answer });
     } catch (error) {
         handleError(error, res);
@@ -70,8 +74,13 @@ app.post('/upload', upload.single('file'), async (req, res) => {
 
     try {
         const response = await axios.post('https://api.aimlapi.com/v1/chat/completions', {
-            model: 'meta-llama/Llama-3-8b-chat-hf', // Confirmed valid model from the list
-            message: message,
+            model: 'meta-llama/Llama-3-8b-chat-hf',
+            messages: [ // Changed from 'message' to 'messages' array
+                {
+                    role: 'user',
+                    content: message
+                }
+            ],
             max_tokens: 512,
             temperature: 0.7,
         }, {
@@ -81,10 +90,9 @@ app.post('/upload', upload.single('file'), async (req, res) => {
             }
         });
 
-        // Debug the full response
         console.log('API Response:', response.data);
 
-        const answer = response.data.choices?.[0]?.text || response.data.answer || response.data.response || 'No valid response';
+        const answer = response.data.choices?.[0]?.message?.content || response.data.answer || response.data.response || 'No valid response';
         res.json({ answer });
     } catch (error) {
         handleError(error, res);
