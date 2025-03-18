@@ -21,8 +21,11 @@ app.get('/', (req, res) => {
 });
 
 app.post('/generate', async (req, res) => {
+    console.log('Received body:', req.body); // Debug the incoming body
     const { prompt } = req.body;
-    console.log('Received prompt:', prompt);
+    if (!prompt) {
+        return res.status(400).json({ error: 'No prompt provided' });
+    }
 
     const aimlApiKey = process.env.AIML_API_KEY;
     if (!aimlApiKey) {
@@ -31,8 +34,7 @@ app.post('/generate', async (req, res) => {
 
     try {
         const response = await axios.post('https://api.aimlapi.com/v1/chat/completions', {
-            model: 'meta-llama/Llama-3-8b-chat-hf',
-            messages: [{ role: 'user', content: prompt }],
+            message: prompt, // Adjusted to use 'message' instead of 'messages'
             max_tokens: 512,
             temperature: 0.7,
         }, {
@@ -42,7 +44,7 @@ app.post('/generate', async (req, res) => {
             }
         });
 
-        const answer = response.data.choices[0].message.content;
+        const answer = response.data.choices?.[0]?.text || response.data.answer || 'No response';
         res.json({ answer });
     } catch (error) {
         handleError(error, res);
@@ -54,8 +56,8 @@ app.post('/upload', upload.single('file'), async (req, res) => {
         return res.status(400).json({ error: 'No file uploaded' });
     }
 
-    const fileContent = req.file.buffer.toString('utf8'); // For text/pdf, adjust for images
-    const prompt = `Analyze this file content: ${fileContent.substring(0, 100)}...`; // Send truncated content
+    const fileContent = req.file.buffer.toString('utf8');
+    const prompt = `Analyze this file content: ${fileContent.substring(0, 100)}...`;
 
     const aimlApiKey = process.env.AIML_API_KEY;
     if (!aimlApiKey) {
@@ -64,8 +66,7 @@ app.post('/upload', upload.single('file'), async (req, res) => {
 
     try {
         const response = await axios.post('https://api.aimlapi.com/v1/chat/completions', {
-            model: 'meta-llama/Llama-3-8b-chat-hf',
-            messages: [{ role: 'user', content: prompt }],
+            message: prompt,
             max_tokens: 512,
             temperature: 0.7,
         }, {
@@ -75,7 +76,7 @@ app.post('/upload', upload.single('file'), async (req, res) => {
             }
         });
 
-        const answer = response.data.choices[0].message.content;
+        const answer = response.data.choices?.[0]?.text || response.data.answer || 'No response';
         res.json({ answer });
     } catch (error) {
         handleError(error, res);
@@ -90,7 +91,7 @@ function handleError(error, res) {
                 error: 'AI/ML API usage limit reached or access denied.'
             });
         } else {
-            res.status(error.response.status).json({ error: error.response.data.error?.message || 'Error' });
+            res.status(error.response.status).json({ error: error.response.data.message || 'Error' });
         }
     } else if (error.request) {
         console.error('No response from AI/ML API:', error.request);
