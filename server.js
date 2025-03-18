@@ -22,9 +22,9 @@ app.get('/', (req, res) => {
 
 app.post('/generate', async (req, res) => {
     console.log('Received body:', req.body); // Debug the incoming body
-    const { prompt } = req.body;
-    if (!prompt) {
-        return res.status(400).json({ error: 'No prompt provided' });
+    const { message } = req.body; // Changed from { prompt } to { message }
+    if (!message) {
+        return res.status(400).json({ error: 'No message provided' });
     }
 
     const aimlApiKey = process.env.AIML_API_KEY;
@@ -34,7 +34,7 @@ app.post('/generate', async (req, res) => {
 
     try {
         const response = await axios.post('https://api.aimlapi.com/v1/chat/completions', {
-            message: prompt, // Adjusted to use 'message' instead of 'messages'
+            message: message, // Use the message field
             max_tokens: 512,
             temperature: 0.7,
         }, {
@@ -44,7 +44,10 @@ app.post('/generate', async (req, res) => {
             }
         });
 
-        const answer = response.data.choices?.[0]?.text || response.data.answer || 'No response';
+        // Debug the full response
+        console.log('API Response:', response.data);
+
+        const answer = response.data.choices?.[0]?.text || response.data.answer || response.data.response || 'No valid response';
         res.json({ answer });
     } catch (error) {
         handleError(error, res);
@@ -57,7 +60,7 @@ app.post('/upload', upload.single('file'), async (req, res) => {
     }
 
     const fileContent = req.file.buffer.toString('utf8');
-    const prompt = `Analyze this file content: ${fileContent.substring(0, 100)}...`;
+    const message = `Analyze this file content: ${fileContent.substring(0, 100)}...`;
 
     const aimlApiKey = process.env.AIML_API_KEY;
     if (!aimlApiKey) {
@@ -66,7 +69,7 @@ app.post('/upload', upload.single('file'), async (req, res) => {
 
     try {
         const response = await axios.post('https://api.aimlapi.com/v1/chat/completions', {
-            message: prompt,
+            message: message,
             max_tokens: 512,
             temperature: 0.7,
         }, {
@@ -76,7 +79,10 @@ app.post('/upload', upload.single('file'), async (req, res) => {
             }
         });
 
-        const answer = response.data.choices?.[0]?.text || response.data.answer || 'No response';
+        // Debug the full response
+        console.log('API Response:', response.data);
+
+        const answer = response.data.choices?.[0]?.text || response.data.answer || response.data.response || 'No valid response';
         res.json({ answer });
     } catch (error) {
         handleError(error, res);
