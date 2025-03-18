@@ -4,50 +4,97 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Wingate AI</title>
+    <link rel='stylesheet' href='https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap'>
     <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
-    <div class="container">
-        <img src="logo.png" alt="Wingate AI Logo" class="logo">
-        <h1>Wingate AI</h1>
-        <input type="text" id="prompt" placeholder="Enter your prompt here...">
-        <button id="generate">Generate</button>
-        <div id="answer-box"></div>
+    <div class="screen-1">
+        <svg class="logo" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" width="300" height="300" viewbox="0 0 640 480" xml:space="preserve">
+            <g transform="matrix(3.31 0 0 3.31 320.4 240.4)">
+                <circle style="stroke: rgb(0,0,0); stroke-width: 0; stroke-dasharray: none; stroke-linecap: butt; stroke-dashoffset: 0; stroke-linejoin: miter; stroke-miterlimit: 4; fill: rgb(61,71,133); fill-rule: nonzero; opacity: 1;" cx="0" cy="0" r="40"></circle>
+            </g>
+            <g transform="matrix(0.98 0 0 0.98 268.7 213.7)">
+                <circle style="stroke: rgb(0,0,0); stroke-width: 0; stroke-dasharray: none; stroke-linecap: butt; stroke-dashoffset: 0; stroke-linejoin: miter; stroke-miterlimit: 4; fill: rgb(255,255,255); fill-rule: nonzero; opacity: 1;" cx="0" cy="0" r="40"></circle>
+            </g>
+            <g transform="matrix(1.01 0 0 1.01 362.9 210.9)">
+                <circle style="stroke: rgb(0,0,0); stroke-width: 0; stroke-dasharray: none; stroke-linecap: butt; stroke-dashoffset: 0; stroke-linejoin: miter; stroke-miterlimit: 4; fill: rgb(255,255,255); fill-rule: nonzero; opacity: 1;" cx="0" cy="0" r="40"></circle>
+            </g>
+            <g transform="matrix(0.92 0 0 0.92 318.5 286.5)">
+                <circle style="stroke: rgb(0,0,0); stroke-width: 0; stroke-dasharray: none; stroke-linecap: butt; stroke-dashoffset: 0; stroke-linejoin: miter; stroke-miterlimit: 4; fill: rgb(255,255,255); fill-rule: nonzero; opacity: 1;" cx="0" cy="0" r="40"></circle>
+            </g>
+            <g transform="matrix(0.16 -0.12 0.49 0.66 290.57 243.57)">
+                <polygon style="stroke: rgb(0,0,0); stroke-width: 0; stroke-dasharray: none; stroke-linecap: butt; stroke-dashoffset: 0; stroke-linejoin: miter; stroke-miterlimit: 4; fill: rgb(255,255,255); fill-rule: nonzero; opacity: 1;" points="-50,-50 -50,50 50,50 50,-50 "></polygon>
+            </g>
+            <g transform="matrix(0.16 0.1 -0.44 0.69 342.03 248.34)">
+                <polygon style="stroke: rgb(0,0,0); stroke-width: 0; stroke-dasharray: none; stroke-linecap: butt; stroke-dashoffset: 0; stroke-linejoin: miter; stroke-miterlimit: 4; fill: rgb(255,255,255); fill-rule: nonzero; opacity: 1;" vector-effect="non-scaling-stroke" points="-50,-50 -50,50 50,50 50,-50 "></polygon>
+            </g>
+        </svg>
+        <div class="chat-container">
+            <div id="chat-box" class="chat-box"></div>
+            <div class="input-area">
+                <input type="text" id="prompt" placeholder="Type your message...">
+                <input type="file" id="file-upload" accept=".txt,.pdf,.jpg,.png" style="display: none;">
+                <button id="upload-btn">Upload</button>
+                <button id="send">Send</button>
+            </div>
+        </div>
+        <!-- Disclaimer Section -->
+        <div class="disclaimer">
+            <p><strong>DISCLAIMER:</strong> Disclaimer: Hello guys please don't ask lots of questions (just important ones) from my AI because I don't want to pay for API key, because its expensive. Please don't report this website because I have been working on this for days and its for Education Purposes ONLY. If you have any questions please let me know in this telegram account: @neonworid Enjoy it!</p>
+        </div>
     </div>
 
-    <!-- Added Disclaimer Section -->
-    <div class="disclaimer">
-        <p><strong>DISCLAIMER:</strong> Disclaimer: Hello guys please don't ask lots of questions (just important ones) from my AI because I don't want to pay for API key, because its expensive. Please don't report this website because I have been working on this for days and its for Education Purposes ONLY.  If you have any questions please let me know in this telegram account: @neonworid Enjoy it!
-</p>
-    </div>
-
+    <script type="module" src="https://unpkg.com/ionicons@5.5.2/dist/ionicons/ionicons.esm.js"></script>
+    <script nomodule src="https://unpkg.com/ionicons@5.5.2/dist/ionicons/ionicons.js"></script>
     <script>
-        document.getElementById('generate').addEventListener('click', async () => {
-            const prompt = document.getElementById('prompt').value;
-            const answerBox = document.getElementById('answer-box');
-            answerBox.innerText = 'Generating...';
+        const chatBox = document.getElementById('chat-box');
+        const promptInput = document.getElementById('prompt');
+        const sendButton = document.getElementById('send');
+        const uploadButton = document.getElementById('upload-btn');
+        const fileInput = document.getElementById('file-upload');
 
-            try {
-                const response = await fetch('/generate', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ prompt })
-                });
+        uploadButton.addEventListener('click', () => fileInput.click());
 
-                const data = await response.json();
-
-                if (response.ok && data.answer) {
-                    answerBox.innerText = data.answer;
-                } else {
-                    answerBox.innerText = data.error || 'Unknown error occurred';
-                }
-            } catch (error) {
-                answerBox.innerText = 'Failed to connect to the server. Please try again.';
-                console.error('Front-end error:', error);
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    const formData = new FormData();
+                    formData.append('file', file);
+                    formData.append('prompt', 'Analyze this file: ' + event.target.result.substring(0, 100)); // Send first 100 chars as context
+                    sendMessage(formData, true);
+                };
+                reader.readAsText(file); // For text/pdf, adjust for images if needed
             }
         });
+
+        sendButton.addEventListener('click', () => {
+            const prompt = promptInput.value.trim();
+            if (prompt) {
+                sendMessage({ prompt }, false);
+                promptInput.value = '';
+            }
+        });
+
+        async function sendMessage(data, isFile = false) {
+            chatBox.innerHTML += `<div class="message user">You: ${isFile ? 'Uploading file...' : data.prompt}</div>`;
+            chatBox.scrollTop = chatBox.scrollHeight;
+
+            try {
+                const url = isFile ? '/upload' : '/generate';
+                const response = await fetch(url, {
+                    method: 'POST',
+                    body: isFile ? data : JSON.stringify(data)
+                });
+                const result = await response.json();
+                chatBox.innerHTML += `<div class="message ai">Wingate AI: ${result.answer || result.error || 'Error'}</div>`;
+            } catch (error) {
+                chatBox.innerHTML += `<div class="message ai">Wingate AI: Failed to connect. Please try again.</div>`;
+                console.error('Error:', error);
+            }
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
     </script>
 </body>
 </html>
