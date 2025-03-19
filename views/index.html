@@ -14,69 +14,112 @@
             <div id="chat-box" class="chat-box"></div>
             <div class="input-area">
                 <input type="text" id="prompt" placeholder="Type your message...">
-                <input type="file" id="file-upload" accept=".txt,.pdf,.jpg,.png" style="display: none;">
-                <button id="upload-btn">📁</button>
+                <input type="file" id="file-upload" accept=".txt,.rtf,.doc,.docx,.odt,.pdf,.md,.tex,.html,.htm,.xml,.json,.yaml,.yml,.csv,.sql,.ini,.properties,.env,.toml,.jpg,.png" style="display: none;">
+                <button id="upload-btn">Upload</button>
                 <button id="send">Send</button>
             </div>
+            <div id="file-status" style="margin-top: 10px; color: #4d4d4d;"></div>
         </div>
-        <!-- Disclaimer Section -->
         <div class="disclaimer">
-            <p><strong>DISCLAIMER:</strong> Please note that while I strive to assist with your inquiries, I may not be able to fulfill every request due to high demand. For specific questions or urgent matters, feel free to reach out via Telegram at @neonworid. Thank you for your understanding! </p>
+            <p><strong>DISCLAIMER:</strong> Disclaimer: Hello guys please don't ask lots of questions (just important ones) from my AI because I don't want to pay for API key, because its expensive. Please don't report this website because I have been working on this for days and its for Education Purposes ONLY. If you have any questions please let me know in this telegram account: @neonworid Enjoy it!</p>
         </div>
     </div>
+
+    <!-- Audio element to play sound on page load -->
+    <audio id="online-sound" src="/online.mp3" preload="auto"></audio>
 
     <script type="module" src="https://unpkg.com/ionicons@5.5.2/dist/ionicons/ionicons.esm.js"></script>
     <script nomodule src="https://unpkg.com/ionicons@5.5.2/dist/ionicons/ionicons.js"></script>
     <script>
+        // Play sound on page load
+        window.addEventListener('load', () => {
+            const sound = document.getElementById('online-sound');
+            sound.play().catch(error => {
+                console.error('Error playing sound:', error);
+            });
+        });
+
         const chatBox = document.getElementById('chat-box');
         const promptInput = document.getElementById('prompt');
         const sendButton = document.getElementById('send');
         const uploadButton = document.getElementById('upload-btn');
         const fileInput = document.getElementById('file-upload');
+        const fileStatus = document.getElementById('file-status');
+        let attachedFile = null;
 
         uploadButton.addEventListener('click', () => fileInput.click());
 
         fileInput.addEventListener('change', (e) => {
             const file = e.target.files[0];
             if (file) {
-                const reader = new FileReader();
-                reader.onload = (event) => {
-                    const formData = new FormData();
-                    formData.append('file', file);
-                    formData.append('prompt', 'Analyze this file: ' + event.target.result.substring(0, 100));
-                    sendMessage(formData, true);
-                };
-                reader.readAsText(file);
+                attachedFile = file;
+                fileStatus.textContent = `Attached: ${file.name}`;
+                promptInput.focus();
+            } else {
+                attachedFile = null;
+                fileStatus.textContent = '';
             }
         });
 
         sendButton.addEventListener('click', () => {
             const prompt = promptInput.value.trim();
-            if (prompt) {
-                sendMessage({ prompt }, false);
+            if (prompt || attachedFile) {
+                sendMessage(prompt, attachedFile);
                 promptInput.value = '';
+                attachedFile = null;
+                fileStatus.textContent = '';
+                fileInput.value = ''; // Reset file input
             }
         });
 
-        async function sendMessage(data, isFile = false) {
-            chatBox.innerHTML += `<div class="message user">You: ${isFile ? 'Uploading file...' : data.prompt}</div>`;
-            chatBox.scrollTop = chatBox.scrollHeight;
+        async function sendMessage(prompt, file) {
+            if (file) {
+                chatBox.innerHTML += `<div class="message user">You: Attached file: ${file.name}</div>`;
+                if (prompt) {
+                    chatBox.innerHTML += `<div class="message user">You: ${prompt}</div>`;
+                }
+                chatBox.scrollTop = chatBox.scrollHeight;
 
-            try {
-                const url = isFile ? '/upload' : '/generate';
-                const options = {
-                    method: 'POST',
-                    headers: isFile ? {} : { 'Content-Type': 'application/json' },
-                    body: isFile ? data : JSON.stringify({ message: data.prompt }) // Adjusted to match API
+                const reader = new FileReader();
+                reader.onload = async (event) => {
+                    const fileContent = event.target.result;
+                    const formData = new FormData();
+                    formData.append('file', file);
+                    formData.append('prompt', prompt || 'Analyze this file');
+                    formData.append('fileContent', fileContent);
+
+                    try {
+                        const response = await fetch('/upload', {
+                            method: 'POST',
+                            body: formData
+                        });
+                        const result = await response.json();
+                        chatBox.innerHTML += `<div class="message ai">Wingate AI: ${result.answer || result.error || 'Error'}</div>`;
+                    } catch (error) {
+                        chatBox.innerHTML += `<div class="message ai">Wingate AI: Failed to connect. Please try again.</div>`;
+                        console.error('Error:', error);
+                    }
+                    chatBox.scrollTop = chatBox.scrollHeight;
                 };
-                const response = await fetch(url, options);
-                const result = await response.json();
-                chatBox.innerHTML += `<div class="message ai">Wingate AI: ${result.answer || result.error || 'Error'}</div>`;
-            } catch (error) {
-                chatBox.innerHTML += `<div class="message ai">Wingate AI: Failed to connect. Please try again.</div>`;
-                console.error('Error:', error);
+                reader.readAsText(file);
+            } else if (prompt) {
+                chatBox.innerHTML += `<div class="message user">You: ${prompt}</div>`;
+                chatBox.scrollTop = chatBox.scrollHeight;
+
+                try {
+                    const response = await fetch('/generate', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ message: prompt })
+                    });
+                    const result = await response.json();
+                    chatBox.innerHTML += `<div class="message ai">Wingate AI: ${result.answer || result.error || 'Error'}</div>`;
+                } catch (error) {
+                    chatBox.innerHTML += `<div class="message ai">Wingate AI: Failed to connect. Please try again.</div>`;
+                    console.error('Error:', error);
+                }
+                chatBox.scrollTop = chatBox.scrollHeight;
             }
-            chatBox.scrollTop = chatBox.scrollHeight;
         }
     </script>
 </body>
