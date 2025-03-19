@@ -35,7 +35,7 @@ app.post('/generate', async (req, res) => {
     try {
         const response = await axios.post('https://api.aimlapi.com/v1/chat/completions', {
             model: 'meta-llama/Llama-3-8b-chat-hf',
-            messages: [ // Changed from 'message' to 'messages' array
+            messages: [
                 {
                     role: 'user',
                     content: message
@@ -65,7 +65,8 @@ app.post('/upload', upload.single('file'), async (req, res) => {
     }
 
     const fileContent = req.file.buffer.toString('utf8');
-    const message = `Analyze this file content: ${fileContent.substring(0, 100)}...`;
+    const prompt = req.body.prompt || 'Analyze this file';
+    const message = `${prompt}\n\nFile content:\n${fileContent.substring(0, 1000)}...`; // Limit content to 1000 chars to avoid API limits
 
     const aimlApiKey = process.env.AIML_API_KEY;
     if (!aimlApiKey) {
@@ -75,7 +76,7 @@ app.post('/upload', upload.single('file'), async (req, res) => {
     try {
         const response = await axios.post('https://api.aimlapi.com/v1/chat/completions', {
             model: 'meta-llama/Llama-3-8b-chat-hf',
-            messages: [ // Changed from 'message' to 'messages' array
+            messages: [
                 {
                     role: 'user',
                     content: message
