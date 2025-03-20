@@ -21,7 +21,7 @@
             <div id="file-status" style="margin-top: 10px; color: #4d4d4d;"></div>
         </div>
         <div class="disclaimer">
-            <p><strong>DISCLAIMER:</strong> Disclaimer: Hello guys please don't ask lots of questions (just important ones) from my AI because I don't want to pay for API key, because its expensive. Please don't report this website because I have been working on this for days and its for Education Purposes ONLY. If you have any questions please let me know in this telegram account: @neonworid Enjoy it!</p>
+            <p><strong>DISCLAIMER:</strong> Hello guys please don't ask lots of questions (just important ones) from my AI because I don't want to pay for API key, because its expensive. Please don't report this website because I have been working on this for days and its for Education Purposes ONLY. If you have any questions please let me know in this telegram account: @neonworid Enjoy it!</p>
         </div>
     </div>
 
@@ -94,9 +94,18 @@
                             body: formData
                         });
                         const result = await response.json();
-                        chatBox.innerHTML += `<div class="message ai">Wingate AI: ${result.answer || result.error || 'Error'}</div>`;
+                        const aiMessage = result.answer || result.error || 'Error';
+                        chatBox.innerHTML += `
+                            <div class="message ai">
+                                Wingate AI: ${aiMessage}
+                                <button class="copy-btn" onclick="copyToClipboard('${aiMessage}')">Copy</button>
+                            </div>`;
                     } catch (error) {
-                        chatBox.innerHTML += `<div class="message ai">Wingate AI: Failed to connect. Please try again.</div>`;
+                        chatBox.innerHTML += `
+                            <div class="message ai">
+                                Wingate AI: Failed to connect. Please try again.
+                                <button class="copy-btn" onclick="copyToClipboard('Failed to connect. Please try again.')">Copy</button>
+                            </div>`;
                         console.error('Error:', error);
                     }
                     chatBox.scrollTop = chatBox.scrollHeight;
@@ -113,13 +122,31 @@
                         body: JSON.stringify({ message: prompt })
                     });
                     const result = await response.json();
-                    chatBox.innerHTML += `<div class="message ai">Wingate AI: ${result.answer || result.error || 'Error'}</div>`;
+                    const aiMessage = result.answer || result.error || 'Error';
+                    chatBox.innerHTML += `
+                        <div class="message ai">
+                            Wingate AI: ${aiMessage}
+                            <button class="copy-btn" onclick="copyToClipboard('${aiMessage}')">Copy</button>
+                        </div>`;
                 } catch (error) {
-                    chatBox.innerHTML += `<div class="message ai">Wingate AI: Failed to connect. Please try again.</div>`;
+                    chatBox.innerHTML += `
+                        <div class="message ai">
+                            Wingate AI: Failed to connect. Please try again.
+                            <button class="copy-btn" onclick="copyToClipboard('Failed to connect. Please try again.')">Copy</button>
+                        </div>`;
                     console.error('Error:', error);
                 }
                 chatBox.scrollTop = chatBox.scrollHeight;
             }
+        }
+
+        // Function to copy text to clipboard
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                alert('Copied to clipboard!');
+            }).catch(err => {
+                console.error('Failed to copy:', err);
+            });
         }
     </script>
 </body>
