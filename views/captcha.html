@@ -87,10 +87,20 @@
 
         // Function to generate a random captcha code (15-25 characters)
         function generateCaptcha() {
-            const length = Math.floor(Math.random() * (25 - 15 + 1)) + 15; // Random length between 15 and 25
+            const length = Math.floor(Math.random() * (25 - 15 + 1)) + 15;
             const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
             let result = '';
             for (let i = 0; i < length; i++) {
+                result += characters.charAt(Math.floor(Math.random() * characters.length));
+            }
+            return result;
+        }
+
+        // Function to generate a random string for the AI page URL
+        function generateRandomString() {
+            const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+            let result = '';
+            for (let i = 0; i < 12; i++) {
                 result += characters.charAt(Math.floor(Math.random() * characters.length));
             }
             return result;
@@ -108,8 +118,9 @@
             const errorMessage = document.getElementById('error-message');
 
             if (userInput === captchaCode) {
-                // Redirect to the AI page
-                window.location.href = '/ai';
+                // Redirect to a random AI page
+                const randomString = generateRandomString();
+                window.location.href = `/ai/${randomString}`;
             } else {
                 errorMessage.style.display = 'block';
                 document.getElementById('captcha-input').value = '';
