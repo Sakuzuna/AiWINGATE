@@ -46,6 +46,7 @@
         const fileInput = document.getElementById('file-upload');
         const fileStatus = document.getElementById('file-status');
         let attachedFile = null;
+        let messageCounter = 0; // To generate unique IDs for messages
 
         uploadButton.addEventListener('click', () => fileInput.click());
 
@@ -73,6 +74,9 @@
         });
 
         async function sendMessage(prompt, file) {
+            messageCounter++; // Increment counter for unique IDs
+            const messageId = `message-${messageCounter}`;
+
             if (file) {
                 chatBox.innerHTML += `<div class="message user">You: Attached file: ${file.name}</div>`;
                 if (prompt) {
@@ -97,14 +101,18 @@
                         const aiMessage = result.answer || result.error || 'Error';
                         chatBox.innerHTML += `
                             <div class="message ai">
-                                Wingate AI: ${aiMessage}
-                                <button class="copy-btn" onclick="copyToClipboard('${aiMessage}')">Copy</button>
+                                <div id="${messageId}" class="message-content">Wingate AI: ${aiMessage}</div>
+                                <div class="button-container">
+                                    <button class="copy-btn" onclick="copyToClipboard('${messageId}')">Copy</button>
+                                </div>
                             </div>`;
                     } catch (error) {
                         chatBox.innerHTML += `
                             <div class="message ai">
-                                Wingate AI: Failed to connect. Please try again.
-                                <button class="copy-btn" onclick="copyToClipboard('Failed to connect. Please try again.')">Copy</button>
+                                <div id="${messageId}" class="message-content">Wingate AI: Failed to connect. Please try again.</div>
+                                <div class="button-container">
+                                    <button class="copy-btn" onclick="copyToClipboard('${messageId}')">Copy</button>
+                                </div>
                             </div>`;
                         console.error('Error:', error);
                     }
@@ -125,14 +133,18 @@
                     const aiMessage = result.answer || result.error || 'Error';
                     chatBox.innerHTML += `
                         <div class="message ai">
-                            Wingate AI: ${aiMessage}
-                            <button class="copy-btn" onclick="copyToClipboard('${aiMessage}')">Copy</button>
+                            <div id="${messageId}" class="message-content">Wingate AI: ${aiMessage}</div>
+                            <div class="button-container">
+                                <button class="copy-btn" onclick="copyToClipboard('${messageId}')">Copy</button>
+                            </div>
                         </div>`;
                 } catch (error) {
                     chatBox.innerHTML += `
                         <div class="message ai">
-                            Wingate AI: Failed to connect. Please try again.
-                            <button class="copy-btn" onclick="copyToClipboard('Failed to connect. Please try again.')">Copy</button>
+                            <div id="${messageId}" class="message-content">Wingate AI: Failed to connect. Please try again.</div>
+                            <div class="button-container">
+                                <button class="copy-btn" onclick="copyToClipboard('${messageId}')">Copy</button>
+                            </div>
                         </div>`;
                     console.error('Error:', error);
                 }
@@ -141,7 +153,9 @@
         }
 
         // Function to copy text to clipboard
-        function copyToClipboard(text) {
+        function copyToClipboard(messageId) {
+            const messageElement = document.getElementById(messageId);
+            const text = messageElement.textContent.replace('Wingate AI: ', ''); // Remove "Wingate AI: " prefix
             navigator.clipboard.writeText(text).then(() => {
                 alert('Copied to clipboard!');
             }).catch(err => {
