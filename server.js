@@ -1,7 +1,7 @@
 const express = require('express');
 const axios = require('axios');
 const multer = require('multer');
-const fs = require('fs'); // Add file system module
+const fs = require('fs');
 const path = require('path');
 require('dotenv').config();
 
@@ -22,7 +22,6 @@ const logIpAddress = (ip) => {
     const ipFilePath = path.join(__dirname, 'ip.txt');
     const logEntry = `${new Date().toISOString()} - ${ip}\n`;
 
-    // Append the IP to the file
     fs.appendFile(ipFilePath, logEntry, (err) => {
         if (err) {
             console.error('Error writing to ip.txt:', err);
@@ -32,10 +31,17 @@ const logIpAddress = (ip) => {
     });
 };
 
+// Route for the captcha page
 app.get('/', (req, res) => {
-    // Get the client's IP address
     const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
-    logIpAddress(clientIp); // Log the IP
+    logIpAddress(clientIp);
+    res.sendFile(path.join(__dirname, 'views', 'captcha.html'));
+});
+
+// Route for the AI page
+app.get('/ai', (req, res) => {
+    const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+    logIpAddress(clientIp);
     res.sendFile(path.join(__dirname, 'views', 'index.html'));
 });
 
