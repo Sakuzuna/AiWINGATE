@@ -17,6 +17,10 @@ app.use(express.static('public'));
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
 
+// In-memory store for active AI pages
+const activeAiPages = new Map(); // Key: randomString, Value: { timeout }
+const INACTIVITY_TIMEOUT = 5 * 60 * 1000; // 5 minutes in milliseconds
+
 // Function to generate a random string (12 characters)
 function generateRandomString() {
     const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
@@ -41,6 +45,15 @@ const logIpAddress = (ip) => {
     });
 };
 
+// Function to clean up an AI page
+function cleanupAiPage(randomString) {
+    if (activeAiPages.has(randomString)) {
+        clearTimeout(activeAiPages.get(randomString).timeout);
+        activeAiPages.delete(randomString);
+        console.log(`Cleaned up AI page: /ai/${randomString}`);
+    }
+}
+
 // Root route: Redirect to a random captcha page
 app.get('/', (req, res) => {
     const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
@@ -58,9 +71,45 @@ app.get('/captcha/:randomString', (req, res) => {
 
 // AI route: Serve AI page with random string in URL
 app.get('/ai/:randomString', (req, res) => {
+    const randomString = req.params.randomString;
     const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
     logIpAddress(clientIp);
+
+    // Check if the AI page is still valid
+    if (!activeAiPages.has(randomString)) {
+        return res.status(404).send('This AI page has expired or does not exist.');
+    }
+
+    // Reset the inactivity timeout
+    clearTimeout(activeAiPages.get(randomString).timeout);
+    const timeout = setTimeout(() => {
+        cleanupAiPage(randomString);
+    }, INACTIVITY_TIMEOUT);
+    activeAiPages.set(randomString, { timeout });
+
     res.sendFile(path.join(__dirname, 'views', 'index.html'));
+});
+
+// Endpoint to register a new AI page (called from captcha.html)
+app.post('/register-ai-page', (req, res) => {
+    const randomString = generateRandomString();
+
+    // Set a timeout to clean up the AI page after inactivity
+    const timeout = setTimeout(() => {
+        cleanupAiPage(randomString);
+    }, INACTIVITY_TIMEOUT);
+
+    activeAiPages.set(randomString, { timeout });
+    res.json({ randomString });
+});
+
+// Endpoint to clean up an AI page when the user leaves
+app.post('/cleanup-ai-page', (req, res) => {
+    const { randomString } = req.body;
+    if (randomString) {
+        cleanupAiPage(randomString);
+    }
+    res.sendStatus(200);
 });
 
 app.post('/generate', async (req, res) => {
