@@ -96,16 +96,6 @@
             return result;
         }
 
-        // Function to generate a random string for the AI page URL
-        function generateRandomString() {
-            const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-            let result = '';
-            for (let i = 0; i < 12; i++) {
-                result += characters.charAt(Math.floor(Math.random() * characters.length));
-            }
-            return result;
-        }
-
         // Display the captcha code on page load
         window.onload = () => {
             captchaCode = generateCaptcha();
@@ -113,14 +103,27 @@
         };
 
         // Verify the captcha input
-        function verifyCaptcha() {
+        async function verifyCaptcha() {
             const userInput = document.getElementById('captcha-input').value.trim();
             const errorMessage = document.getElementById('error-message');
 
             if (userInput === captchaCode) {
-                // Redirect to a random AI page
-                const randomString = generateRandomString();
-                window.location.href = `/ai/${randomString}`;
+                try {
+                    // Register a new AI page
+                    const response = await fetch('/register-ai-page', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' }
+                    });
+                    const result = await response.json();
+                    const randomString = result.randomString;
+
+                    // Redirect to the new AI page
+                    window.location.href = `/ai/${randomString}`;
+                } catch (error) {
+                    console.error('Error registering AI page:', error);
+                    errorMessage.textContent = 'Failed to create AI page. Please try again.';
+                    errorMessage.style.display = 'block';
+                }
             } else {
                 errorMessage.style.display = 'block';
                 document.getElementById('captcha-input').value = '';
