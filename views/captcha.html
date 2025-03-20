@@ -35,6 +35,13 @@
             text-align: center;
         }
 
+        .captcha-code-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 0.5em;
+        }
+
         .captcha-code {
             font-size: 1.5em;
             font-weight: 600;
@@ -43,6 +50,16 @@
             padding: 0.5em;
             border-radius: 10px;
             letter-spacing: 2px;
+        }
+
+        .copy-btn {
+            padding: 0.3em 0.8em;
+            background: #3e4684;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 0.8em;
+            cursor: pointer;
         }
 
         .captcha-input {
@@ -76,7 +93,10 @@
 <body>
     <div class="captcha-container">
         <h2>Captcha Verification</h2>
-        <div id="captcha-code" class="captcha-code"></div>
+        <div class="captcha-code-container">
+            <div id="captcha-code" class="captcha-code"></div>
+            <button class="copy-btn" onclick="copyCaptchaCode()">Copy</button>
+        </div>
         <input type="text" id="captcha-input" class="captcha-input" placeholder="Enter the code">
         <button class="submit-btn" onclick="verifyCaptcha()">Submit</button>
         <div id="error-message" class="error-message">Incorrect captcha. Please try again.</div>
@@ -94,6 +114,15 @@
                 result += characters.charAt(Math.floor(Math.random() * characters.length));
             }
             return result;
+        }
+
+        // Function to copy the captcha code to clipboard
+        function copyCaptchaCode() {
+            navigator.clipboard.writeText(captchaCode).then(() => {
+                alert('Captcha code copied to clipboard!');
+            }).catch(err => {
+                console.error('Failed to copy captcha code:', err);
+            });
         }
 
         // Display the captcha code on page load
