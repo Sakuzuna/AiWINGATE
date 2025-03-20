@@ -39,6 +39,15 @@
             });
         });
 
+        // Extract the random string from the URL
+        const randomString = window.location.pathname.split('/').pop();
+
+        // Notify the server when the user leaves the page
+        window.addEventListener('beforeunload', () => {
+            // Use navigator.sendBeacon to ensure the request is sent even if the page is closing
+            navigator.sendBeacon('/cleanup-ai-page', JSON.stringify({ randomString }));
+        });
+
         const chatBox = document.getElementById('chat-box');
         const promptInput = document.getElementById('prompt');
         const sendButton = document.getElementById('send');
