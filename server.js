@@ -21,6 +21,9 @@ const upload = multer({ storage: storage });
 const activeAiPages = new Map(); // Key: randomString, Value: { timeout }
 const INACTIVITY_TIMEOUT = 5 * 60 * 1000; // 5 minutes in milliseconds
 
+// In-memory Set to track IPs that have passed the captcha
+const passedIps = new Set();
+
 // Function to generate a random string (12 characters)
 function generateRandomString() {
     const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
@@ -54,19 +57,42 @@ function cleanupAiPage(randomString) {
     }
 }
 
-// Root route: Redirect to a random captcha page
+// Root route: Check if IP has passed captcha, redirect accordingly
 app.get('/', (req, res) => {
     const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
     logIpAddress(clientIp);
-    const randomString = generateRandomString();
-    res.redirect(`/captcha/${randomString}`);
+
+    if (passedIps.has(clientIp)) {
+        // IP has already passed the captcha, redirect to a new AI page
+        const randomString = generateRandomString();
+        const timeout = setTimeout(() => {
+            cleanupAiPage(randomString);
+        }, INACTIVITY_TIMEOUT);
+        activeAiPages.set(randomString, { timeout });
+        res.redirect(`/ai/${randomString}`);
+    } else {
+        // IP hasn't passed the captcha, redirect to a new captcha page
+        const randomString = generateRandomString();
+        res.redirect(`/captcha/${randomString}`);
+    }
 });
 
 // Captcha route: Serve captcha page with random string in URL
 app.get('/captcha/:randomString', (req, res) => {
     const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
     logIpAddress(clientIp);
-    res.sendFile(path.join(__dirname, 'views', 'captcha.html'));
+
+    // If the IP has already passed, redirect to a new AI page
+    if (passedIps.has(clientIp)) {
+        const randomString = generateRandomString();
+        const timeout = setTimeout(() => {
+            cleanupAiPage(randomString);
+        }, INACTIVITY_TIMEOUT);
+        activeAiPages.set(randomString, { timeout });
+        res.redirect(`/ai/${randomString}`);
+    } else {
+        res.sendFile(path.join(__dirname, 'views', 'captcha.html'));
+    }
 });
 
 // AI route: Serve AI page with random string in URL
@@ -92,13 +118,15 @@ app.get('/ai/:randomString', (req, res) => {
 
 // Endpoint to register a new AI page (called from captcha.html)
 app.post('/register-ai-page', (req, res) => {
-    const randomString = generateRandomString();
+    const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+    // Add the IP to the passedIps Set
+    passedIps.add(clientIp);
+    console.log(`IP ${clientIp} passed the captcha`);
 
-    // Set a timeout to clean up the AI page after inactivity
+    const randomString = generateRandomString();
     const timeout = setTimeout(() => {
         cleanupAiPage(randomString);
     }, INACTIVITY_TIMEOUT);
-
     activeAiPages.set(randomString, { timeout });
     res.json({ randomString });
 });
