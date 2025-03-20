@@ -17,6 +17,16 @@ app.use(express.static('public'));
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
 
+// Function to generate a random string (12 characters)
+function generateRandomString() {
+    const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    let result = '';
+    for (let i = 0; i < 12; i++) {
+        result += characters.charAt(Math.floor(Math.random() * characters.length));
+    }
+    return result;
+}
+
 // Function to log IP address to ip.txt
 const logIpAddress = (ip) => {
     const ipFilePath = path.join(__dirname, 'ip.txt');
@@ -31,15 +41,23 @@ const logIpAddress = (ip) => {
     });
 };
 
-// Route for the captcha page
+// Root route: Redirect to a random captcha page
 app.get('/', (req, res) => {
+    const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+    logIpAddress(clientIp);
+    const randomString = generateRandomString();
+    res.redirect(`/captcha/${randomString}`);
+});
+
+// Captcha route: Serve captcha page with random string in URL
+app.get('/captcha/:randomString', (req, res) => {
     const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
     logIpAddress(clientIp);
     res.sendFile(path.join(__dirname, 'views', 'captcha.html'));
 });
 
-// Route for the AI page
-app.get('/ai', (req, res) => {
+// AI route: Serve AI page with random string in URL
+app.get('/ai/:randomString', (req, res) => {
     const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
     logIpAddress(clientIp);
     res.sendFile(path.join(__dirname, 'views', 'index.html'));
