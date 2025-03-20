@@ -2,6 +2,16 @@
     font-family: "Poppins";
 }
 
+backgroundpicture {
+    margin: 0;
+    padding: 0;
+    height: 100vh; /* Full height of the viewport */
+    background-image: url('https://www.freestock.com/free-videos/loop-animation-falling-snowflakes-alpha-matte-3102526');
+    background-size: cover; /* Cover the entire background */
+    background-position: center; /* Center the background image */
+    background-repeat: no-repeat; /* Prevent the background from repeating */
+}
+
 body {
     -webkit-user-select: none;
     -moz-user-select: none;
