@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Auth - Wingate AI</title>
+    <link rel='stylesheet' href='https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;1,100;1,200;1,300&display=swap'>
+    <style>
+        * {
+            font-family: "Poppins";
+        }
+
+        body {
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+            overflow-y: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: #dde5f4;
+            height: 100vh;
+        }
+
+        .auth-container {
+            background: #f1f7fe;
+            padding: 2em;
+            display: flex;
+            flex-direction: column;
+            border-radius: 30px;
+            box-shadow: 0 0 2em #e6e9f9;
+            gap: 1em;
+            width: 400px;
+            text-align: center;
+        }
+
+        .auth-toggle {
+            display: flex;
+            justify-content: center;
+            gap: 1em;
+            margin-bottom: 1em;
+        }
+
+        .auth-toggle button {
+            padding: 0.5em 1em;
+            border: none;
+            border-radius: 20px;
+            font-weight: 600;
+            cursor: pointer;
+            background: #e6e9f9;
+            color: #4d4d4d;
+        }
+
+        .auth-toggle button.active {
+            background: #3e4684;
+            color: white;
+        }
+
+        .auth-input {
+            padding: 0.5em;
+            outline: none;
+            border: none;
+            border-radius: 20px;
+            background: white;
+            box-shadow: 0 0 2em #e6e9f9;
+            font-size: 1em;
+            text-align: center;
+        }
+
+        .submit-btn {
+            padding: 0.5em 1em;
+            background: #3e4684;
+            color: white;
+            border: none;
+            border-radius: 20px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .error-message {
+            color: #d63333;
+            font-size: 0.9em;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="auth-container">
+        <div class="auth-toggle">
+            <button id="signup-btn" class="active" onclick="switchMode('signup')">Signup</button>
+            <button id="login-btn" onclick="switchMode('login')">Login</button>
+        </div>
+        <h2 id="auth-title">Signup</h2>
+        <input type="text" id="username" class="auth-input" placeholder="Enter username">
+        <input type="password" id="password" class="auth-input" placeholder="Enter password">
+        <button class="submit-btn" onclick="submitAuth()">Submit</button>
+        <div id="error-message" class="error-message">Error occurred. Please try again.</div>
+    </div>
+
+    <script>
+        let mode = 'signup'; // Default mode
+
+        function switchMode(newMode) {
+            mode = newMode;
+            document.getElementById('signup-btn').classList.toggle('active', mode === 'signup');
+            document.getElementById('login-btn').classList.toggle('active', mode === 'login');
+            document.getElementById('auth-title').textContent = mode === 'signup' ? 'Signup' : 'Login';
+            document.getElementById('error-message').style.display = 'none';
+        }
+
+        async function submitAuth() {
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value.trim();
+            const errorMessage = document.getElementById('error-message');
+
+            if (!username || !password) {
+                errorMessage.textContent = 'Please enter both username and password.';
+                errorMessage.style.display = 'block';
+                return;
+            }
+
+            const endpoint = mode === 'signup' ? '/signup' : '/login';
+            try {
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                const result = await response.json();
+
+                if (result.randomString) {
+                    window.location.href = `/ai/${result.randomString}`;
+                } else {
+                    errorMessage.textContent = result.error || 'Error occurred.';
+                    errorMessage.style.display = 'block';
+                }
+            } catch (error) {
+                errorMessage.textContent = mode === 'signup' ? 'Failed to signup. Please try again.' : 'Failed to login. Please try again.';
+                errorMessage.style.display = 'block';
+                console.error('Error:', error);
+            }
+        }
+
+        document.getElementById('password').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                submitAuth();
+            }
+        });
+    </script>
+</body>
+</html>
