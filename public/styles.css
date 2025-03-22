@@ -139,3 +139,29 @@ body {
 .disclaimer strong {
     color: #d63333;
 }
+
+.chat-selector {
+    display: flex;
+    gap: 1em;
+    margin-bottom: 1em;
+}
+
+.chat-selector select {
+    flex-grow: 1;
+    padding: 0.5em;
+    border-radius: 20px;
+    background: white;
+    box-shadow: 0 0 2em #e6e9f9;
+    border: none;
+    outline: none;
+}
+
+.chat-selector button {
+    padding: 0.5em 1em;
+    background: #3e4684;
+    color: white;
+    border: none;
+    border-radius: 20px;
+    font-weight: 600;
+    cursor: pointer;
+}
