@@ -105,7 +105,6 @@
     <script>
         let captchaCode = '';
 
-        // Function to generate a random captcha code (15-25 characters)
         function generateCaptcha() {
             const length = Math.floor(Math.random() * (25 - 15 + 1)) + 15;
             const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
@@ -116,7 +115,6 @@
             return result;
         }
 
-        // Function to copy the captcha code to clipboard
         function copyCaptchaCode() {
             navigator.clipboard.writeText(captchaCode).then(() => {
                 alert('Captcha code copied to clipboard!');
@@ -125,20 +123,17 @@
             });
         }
 
-        // Display the captcha code on page load
         window.onload = () => {
             captchaCode = generateCaptcha();
             document.getElementById('captcha-code').textContent = captchaCode;
         };
 
-        // Verify the captcha input
         async function verifyCaptcha() {
             const userInput = document.getElementById('captcha-input').value.trim();
             const errorMessage = document.getElementById('error-message');
 
             if (userInput === captchaCode) {
                 try {
-                    // Register a new AI page
                     const response = await fetch('/register-ai-page', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' }
@@ -146,23 +141,20 @@
                     const result = await response.json();
                     const randomString = result.randomString;
 
-                    // Redirect to the new AI page
-                    window.location.href = `/ai/${randomString}`;
+                    window.location.href = `/auth/${randomString}`;
                 } catch (error) {
-                    console.error('Error registering AI page:', error);
-                    errorMessage.textContent = 'Failed to create AI page. Please try again.';
+                    console.error('Error registering page:', error);
+                    errorMessage.textContent = 'Failed to proceed. Please try again.';
                     errorMessage.style.display = 'block';
                 }
             } else {
                 errorMessage.style.display = 'block';
                 document.getElementById('captcha-input').value = '';
-                // Generate a new captcha
                 captchaCode = generateCaptcha();
                 document.getElementById('captcha-code').textContent = captchaCode;
             }
         }
 
-        // Allow Enter key to submit
         document.getElementById('captcha-input').addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
                 verifyCaptcha();
