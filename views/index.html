@@ -11,6 +11,12 @@
     <div class="screen-1">
         <img src="/logo.png" alt="Wingate AI Logo" class="logo">
         <div class="chat-container">
+            <div class="chat-selector">
+                <button id="new-chat-btn">New Chat</button>
+                <select id="chat-select">
+                    <option value="">Select a chat</option>
+                </select>
+            </div>
             <div id="chat-box" class="chat-box"></div>
             <div class="input-area">
                 <input type="text" id="prompt" placeholder="Type your message...">
@@ -25,26 +31,21 @@
         </div>
     </div>
 
-    <!-- Audio element to play sound on page load -->
     <audio id="online-sound" src="/online.mp3" preload="auto"></audio>
 
     <script type="module" src="https://unpkg.com/ionicons@5.5.2/dist/ionicons/ionicons.esm.js"></script>
     <script nomodule src="https://unpkg.com/ionicons@5.5.2/dist/ionicons/ionicons.js"></script>
     <script>
-        // Play sound on page load
         window.addEventListener('load', () => {
             const sound = document.getElementById('online-sound');
             sound.play().catch(error => {
                 console.error('Error playing sound:', error);
             });
+            loadChats();
         });
 
-        // Extract the random string from the URL
         const randomString = window.location.pathname.split('/').pop();
-
-        // Notify the server when the user leaves the page
         window.addEventListener('beforeunload', () => {
-            // Use navigator.sendBeacon to ensure the request is sent even if the page is closing
             navigator.sendBeacon('/cleanup-ai-page', JSON.stringify({ randomString }));
         });
 
@@ -54,8 +55,11 @@
         const uploadButton = document.getElementById('upload-btn');
         const fileInput = document.getElementById('file-upload');
         const fileStatus = document.getElementById('file-status');
+        const chatSelect = document.getElementById('chat-select');
+        const newChatButton = document.getElementById('new-chat-btn');
         let attachedFile = null;
-        let messageCounter = 0; // To generate unique IDs for messages
+        let messageCounter = 0;
+        let currentChatId = null;
 
         uploadButton.addEventListener('click', () => fileInput.click());
 
@@ -73,23 +77,108 @@
 
         sendButton.addEventListener('click', () => {
             const prompt = promptInput.value.trim();
-            if (prompt || attachedFile) {
+            if ((prompt || attachedFile) && currentChatId) {
                 sendMessage(prompt, attachedFile);
                 promptInput.value = '';
                 attachedFile = null;
                 fileStatus.textContent = '';
-                fileInput.value = ''; // Reset file input
+                fileInput.value = '';
             }
         });
 
+        newChatButton.addEventListener('click', async () => {
+            try {
+                const response = await fetch('/create-chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                const result = await response.json();
+                if (result.chatId) {
+                    currentChatId = result.chatId;
+                    chatBox.innerHTML = '';
+                    loadChats();
+                } else {
+                    alert(result.error || 'Failed to create new chat.');
+                }
+            } catch (error) {
+                console.error('Error creating chat:', error);
+                alert('Failed to create new chat.');
+            }
+        });
+
+        chatSelect.addEventListener('change', () => {
+            currentChatId = chatSelect.value;
+            loadChatMessages();
+        });
+
+        async function loadChats() {
+            try {
+                const response = await fetch('/get-chats');
+                const userChats = await response.json();
+                chatSelect.innerHTML = '<option value="">Select a chat</option>';
+                userChats.forEach(chat => {
+                    const option = document.createElement('option');
+                    option.value = chat.id;
+                    option.textContent = `Chat ${chat.id} (${new Date(chat.createdAt).toLocaleString()})`;
+                    chatSelect.appendChild(option);
+                });
+                if (!currentChatId && userChats.length > 0) {
+                    currentChatId = userChats[0].id;
+                    chatSelect.value = currentChatId;
+                    loadChatMessages();
+                }
+            } catch (error) {
+                console.error('Error loading chats:', error);
+            }
+        }
+
+        async function loadChatMessages() {
+            chatBox.innerHTML = '';
+            try {
+                const response = await fetch('/get-chats');
+                const userChats = await response.json();
+                const chat = userChats.find(c => c.id === currentChatId);
+                if (chat) {
+                    chat.messages.forEach(msg => {
+                        messageCounter++;
+                        const messageId = `message-${messageCounter}`;
+                        const messageHtml = msg.isUser
+                            ? `<div class="message user">You: ${msg.content}</div>`
+                            : `
+                                <div class="message ai">
+                                    <div id="${messageId}" class="message-content">Wingate AI: ${msg.content}</div>
+                                    <div class="button-container">
+                                        <button class="copy-btn" onclick="copyToClipboard('${messageId}')">Copy</button>
+                                    </div>
+                                </div>`;
+                        chatBox.innerHTML += messageHtml;
+                    });
+                    chatBox.scrollTop = chatBox.scrollHeight;
+                }
+            } catch (error) {
+                console.error('Error loading messages:', error);
+            }
+        }
+
         async function sendMessage(prompt, file) {
-            messageCounter++; // Increment counter for unique IDs
+            messageCounter++;
             const messageId = `message-${messageCounter}`;
 
             if (file) {
                 chatBox.innerHTML += `<div class="message user">You: Attached file: ${file.name}</div>`;
+                await fetch('/save-message', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ chatId: currentChatId, message: `Attached file: ${file.name}`, isUser: true })
+                });
+
                 if (prompt) {
                     chatBox.innerHTML += `<div class="message user">You: ${prompt}</div>`;
+                    await fetch('/save-message', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ chatId: currentChatId, message: prompt, isUser: true })
+                    });
                 }
                 chatBox.scrollTop = chatBox.scrollHeight;
 
@@ -115,6 +204,11 @@
                                     <button class="copy-btn" onclick="copyToClipboard('${messageId}')">Copy</button>
                                 </div>
                             </div>`;
+                        await fetch('/save-message', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ chatId: currentChatId, message: aiMessage, isUser: false })
+                        });
                     } catch (error) {
                         chatBox.innerHTML += `
                             <div class="message ai">
@@ -123,6 +217,11 @@
                                     <button class="copy-btn" onclick="copyToClipboard('${messageId}')">Copy</button>
                                 </div>
                             </div>`;
+                        await fetch('/save-message', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ chatId: currentChatId, message: 'Failed to connect. Please try again.', isUser: false })
+                        });
                         console.error('Error:', error);
                     }
                     chatBox.scrollTop = chatBox.scrollHeight;
@@ -130,6 +229,11 @@
                 reader.readAsText(file);
             } else if (prompt) {
                 chatBox.innerHTML += `<div class="message user">You: ${prompt}</div>`;
+                await fetch('/save-message', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ chatId: currentChatId, message: prompt, isUser: true })
+                });
                 chatBox.scrollTop = chatBox.scrollHeight;
 
                 try {
@@ -147,6 +251,11 @@
                                 <button class="copy-btn" onclick="copyToClipboard('${messageId}')">Copy</button>
                             </div>
                         </div>`;
+                    await fetch('/save-message', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ chatId: currentChatId, message: aiMessage, isUser: false })
+                    });
                 } catch (error) {
                     chatBox.innerHTML += `
                         <div class="message ai">
@@ -155,16 +264,20 @@
                                 <button class="copy-btn" onclick="copyToClipboard('${messageId}')">Copy</button>
                             </div>
                         </div>`;
+                    await fetch('/save-message', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ chatId: currentChatId, message: 'Failed to connect. Please try again.', isUser: false })
+                    });
                     console.error('Error:', error);
                 }
                 chatBox.scrollTop = chatBox.scrollHeight;
             }
         }
 
-        // Function to copy text to clipboard
         function copyToClipboard(messageId) {
             const messageElement = document.getElementById(messageId);
-            const text = messageElement.textContent.replace('Wingate AI: ', ''); // Remove "Wingate AI: " prefix
+            const text = messageElement.textContent.replace('Wingate AI: ', '');
             navigator.clipboard.writeText(text).then(() => {
                 alert('Copied to clipboard!');
             }).catch(err => {
