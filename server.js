@@ -296,7 +296,7 @@ app.post('/generate', async (req, res) => {
 
     try {
         const response = await axios.post('https://api.aimlapi.com/v1/chat/completions', {
-            model: 'meta-llama/Llama-3-8b-chat-hf',
+            model: 'meta-llama/Llama-3.3-70B-Instruct-Turbo',
             messages: [{ role: 'user', content: message }],
             max_tokens: 512,
             temperature: 0.7,
@@ -330,7 +330,7 @@ app.post('/upload', upload.single('file'), async (req, res) => {
 
     try {
         const response = await axios.post('https://api.aimlapi.com/v1/chat/completions', {
-            model: 'meta-llama/Llama-3-8b-chat-hf',
+            model: 'meta-llama/Llama-3.3-70B-Instruct-Turbo',
             messages: [{ role: 'user', content: message }],
             max_tokens: 512,
             temperature: 0.7,
