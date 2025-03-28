@@ -3,12 +3,163 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Technical work service will be available soon</title>
+    <title>Captcha Verification</title>
     <link rel='stylesheet' href='https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap'>
-    <link rel="stylesheet" href="/styles.css">
+    <style>
+        * {
+            font-family: "Poppins";
+        }
+
+        body {
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+            overflow-y: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: #dde5f4;
+            height: 100vh;
+        }
+
+        .captcha-container {
+            background: #f1f7fe;
+            padding: 2em;
+            display: flex;
+            flex-direction: column;
+            border-radius: 30px;
+            box-shadow: 0 0 2em #e6e9f9;
+            gap: 1em;
+            width: 400px;
+            text-align: center;
+        }
+
+        .captcha-code-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 0.5em;
+        }
+
+        .captcha-code {
+            font-size: 1.5em;
+            font-weight: 600;
+            color: #3e4684;
+            background: #e6e9f9;
+            padding: 0.5em;
+            border-radius: 10px;
+            letter-spacing: 2px;
+        }
+
+        .copy-btn {
+            padding: 0.3em 0.8em;
+            background: #3e4684;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 0.8em;
+            cursor: pointer;
+        }
+
+        .captcha-input {
+            padding: 0.5em;
+            outline: none;
+            border: none;
+            border-radius: 20px;
+            background: white;
+            box-shadow: 0 0 2em #e6e9f9;
+            font-size: 1em;
+            text-align: center;
+        }
+
+        .submit-btn {
+            padding: 0.5em 1em;
+            background: #3e4684;
+            color: white;
+            border: none;
+            border-radius: 20px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .error-message {
+            color: #d63333;
+            font-size: 0.9em;
+            display: none;
+        }
+    </style>
 </head>
 <body>
-    <div class="screen-1">
-        <h1>Technical work service will be available soon</h1>
+    <div class="captcha-container">
+        <h2>Captcha Verification</h2>
+        <div class="captcha-code-container">
+            <div id="captcha-code" class="captcha-code"></div>
+            <button class="copy-btn" onclick="copyCaptchaCode()">Copy</button>
+        </div>
+        <input type="text" id="captcha-input" class="captcha-input" placeholder="Enter the code">
+        <button class="submit-btn" onclick="verifyCaptcha()">Submit</button>
+        <div id="error-message" class="error-message">Incorrect captcha. Please try again.</div>
+    </div>
+
+    <script>
+        let captchaCode = '';
+
+        function generateCaptcha() {
+            const length = Math.floor(Math.random() * (25 - 15 + 1)) + 15;
+            const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+            let result = '';
+            for (let i = 0; i < length; i++) {
+                result += characters.charAt(Math.floor(Math.random() * characters.length));
+            }
+            return result;
+        }
+
+        function copyCaptchaCode() {
+            navigator.clipboard.writeText(captchaCode).then(() => {
+                alert('Captcha code copied to clipboard!');
+            }).catch(err => {
+                console.error('Failed to copy captcha code:', err);
+            });
+        }
+
+        window.onload = () => {
+            captchaCode = generateCaptcha();
+            document.getElementById('captcha-code').textContent = captchaCode;
+        };
+
+        async function verifyCaptcha() {
+            const userInput = document.getElementById('captcha-input').value.trim();
+            const errorMessage = document.getElementById('error-message');
+
+            if (userInput === captchaCode) {
+                try {
+                    const response = await fetch('/register-ai-page', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' }
+                    });
+                    const result = await response.json();
+                    const randomString = result.randomString;
+
+                    window.location.href = `/auth/${randomString}`;
+                } catch (error) {
+                    console.error('Error registering page:', error);
+                    errorMessage.textContent = 'Failed to proceed. Please try again.';
+                    errorMessage.style.display = 'block';
+                }
+            } else {
+                errorMessage.style.display = 'block';
+                document.getElementById('captcha-input').value = '';
+                captchaCode = generateCaptcha();
+                document.getElementById('captcha-code').textContent = captchaCode;
+            }
+        }
+
+        document.getElementById('captcha-input').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                verifyCaptcha();
+            }
+        });
+    </script>
 </body>
 </html>
