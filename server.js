@@ -3,6 +3,7 @@ const axios = require('axios');
 const multer = require('multer');
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto'); // Added for SHA-256 hashing
 require('dotenv').config();
 
 const app = express();
@@ -60,6 +61,11 @@ const logIpAddress = (ip) => {
     console.log(`Logged IP: ${ip}`);
 };
 
+// Function to hash password using SHA-256
+function hashPassword(password) {
+    return crypto.createHash('sha256').update(password).digest('hex');
+}
+
 // Function to clean up an AI page
 function cleanupAiPage(randomString) {
     if (activeAiPages.has(randomString)) {
@@ -84,7 +90,6 @@ app.get('/', (req, res) => {
     logIpAddress(clientIp);
 
     if (passedIps.has(clientIp)) {
-        // IP has already passed the captcha, redirect to auth page
         const randomString = generateRandomString();
         const timeout = setTimeout(() => {
             cleanupAuthPage(randomString);
@@ -92,7 +97,6 @@ app.get('/', (req, res) => {
         activeAuthPages.set(randomString, { timeout });
         res.redirect(`/auth/${randomString}`);
     } else {
-        // IP hasn't passed the captcha, redirect to a new captcha page
         const randomString = generateRandomString();
         res.redirect(`/captcha/${randomString}`);
     }
@@ -174,10 +178,12 @@ app.post('/signup', (req, res) => {
         return res.status(400).json({ error: 'Username and password are required' });
     }
 
+    // Hash the password before storing
+    const hashedPassword = hashPassword(password);
     const passFilePath = path.join(__dirname, 'pass.txt');
-    const entry = `${username}:${password}\n`;
+    const entry = `${username}:${hashedPassword}\n`;
     fs.appendFileSync(passFilePath, entry);
-    console.log(`Saved credentials: ${username}:${password}`);
+    console.log(`Saved credentials: ${username}:${hashedPassword}`);
 
     const randomString = generateRandomString();
     const timeout = setTimeout(() => {
@@ -196,7 +202,15 @@ app.post('/login', (req, res) => {
 
     const passFilePath = path.join(__dirname, 'pass.txt');
     const credentials = fs.existsSync(passFilePath) ? fs.readFileSync(passFilePath, 'utf8').split('\n') : [];
-    const userEntry = credentials.find(line => line === `${username}:${password}`);
+    
+    // Hash the input password
+    const hashedInputPassword = hashPassword(password);
+    
+    // Find matching username and hashed password
+    const userEntry = credentials.find(line => {
+        const [storedUsername, storedPassword] = line.split(':');
+        return storedUsername === username && storedPassword === hashedInputPassword;
+    });
 
     if (userEntry) {
         const randomString = generateRandomString();
@@ -206,7 +220,13 @@ app.post('/login', (req, res) => {
         activeAiPages.set(randomString, { timeout });
         res.json({ randomString });
     } else {
-        res.status(401).json({ error: 'Invalid username or password' });
+        // Check if username exists to provide more specific error
+        const usernameExists = credentials.some(line => line.startsWith(`${username}:`));
+        if (usernameExists) {
+            res.status(401).json({ error: 'Invalid password' });
+        } else {
+            res.status(401).json({ error: 'Invalid username or password' });
+        }
     }
 });
 
