@@ -370,10 +370,10 @@ app.post('/generate', async (req, res) => {
     }
 
     try {
-        // Concurrently fetch responses from GPT-4.5-preview, DeepSeek R1, and Gemini-1.5-pro
+        // Concurrently fetch responses from GPT-4.5-preview, DeepSeek R1, and Gemini-1.5-pro via AIML API
         const [gptResponse, deepseekResponse, geminiResponse] = await Promise.all([
-            axios.post('https://api.openai.com/v1/chat/completions', {
-                model: 'gpt-4.5-preview', // Adjust model name if needed
+            axios.post('https://api.aimlapi.com/v1/chat/completions', {
+                model: 'gpt-4.5-preview',
                 messages: [{ role: 'user', content: message }],
                 max_tokens: 512,
                 temperature: 0.7,
@@ -382,9 +382,12 @@ app.post('/generate', async (req, res) => {
                     'Authorization': `Bearer ${gptApiKey}`,
                     'Content-Type': 'application/json'
                 }
-            }).catch(() => ({ data: { choices: [{ message: { content: 'GPT-4.5 failed to respond' } }] } })),
-            
-            axios.post('https://api.deepseek.com/v1/chat/completions', {
+            }).catch(err => {
+                console.error('GPT Error:', err.response?.data || err.message);
+                return { data: { choices: [{ message: { content: 'GPT-4.5 failed to respond' } }] } };
+            }),
+
+            axios.post('https://api.aimlapi.com/v1/chat/completions', {
                 model: 'deepseek-r1',
                 messages: [{ role: 'user', content: message }],
                 max_tokens: 512,
@@ -394,22 +397,36 @@ app.post('/generate', async (req, res) => {
                     'Authorization': `Bearer ${deepseekApiKey}`,
                     'Content-Type': 'application/json'
                 }
-            }).catch(() => ({ data: { choices: [{ message: { content: 'DeepSeek failed to respond' } }] } })),
-            
-            axios.post('https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent', {
-                contents: [{ parts: [{ text: message }] }],
+            }).catch(err => {
+                console.error('DeepSeek Error:', err.response?.data || err.message);
+                return { data: { choices: [{ message: { content: 'DeepSeek failed to respond' } }] } };
+            }),
+
+            axios.post('https://api.aimlapi.com/v1/chat/completions', {
+                model: 'gemini-1.5-pro',
+                messages: [{ role: 'user', content: message }],
+                max_tokens: 512,
+                temperature: 0.7,
             }, {
                 headers: {
                     'Authorization': `Bearer ${geminiApiKey}`,
                     'Content-Type': 'application/json'
                 }
-            }).catch(() => ({ data: { candidates: [{ content: { parts: [{ text: 'Gemini failed to respond' }] } }] } })),
+            }).catch(err => {
+                console.error('Gemini Error:', err.response?.data || err.message);
+                return { data: { choices: [{ message: { content: 'Gemini failed to respond' } }] } };
+            }),
         ]);
 
         // Extract responses
         const gptText = gptResponse.data.choices?.[0]?.message?.content || 'No valid response from GPT';
         const deepseekText = deepseekResponse.data.choices?.[0]?.message?.content || 'No valid response from DeepSeek';
-        const geminiText = geminiResponse.data.candidates?.[0]?.content?.parts?.[0]?.text || 'No valid response from Gemini';
+        const geminiText = geminiResponse.data.choices?.[0]?.message?.content || 'No valid response from Gemini';
+
+        // Log the intermediate responses for debugging
+        console.log('GPT Response:', gptText);
+        console.log('DeepSeek Response:', deepseekText);
+        console.log('Gemini Response:', geminiText);
 
         // Construct prompt for Llama
         const llamaPrompt = `
@@ -432,9 +449,13 @@ Gemini-1.5-pro: ${geminiText}
                 'Authorization': `Bearer ${llamaApiKey}`,
                 'Content-Type': 'application/json'
             }
+        }).catch(err => {
+            console.error('Llama Error:', err.response?.data || err.message);
+            return { data: { choices: [{ message: { content: 'Llama failed to combine responses. Original query: ' + message } }] } };
         });
 
         const finalAnswer = llamaResponse.data.choices?.[0]?.message?.content || 'No valid response from Llama';
+        console.log('Final Llama Response:', finalAnswer);
         res.json({ answer: finalAnswer });
     } catch (error) {
         handleError(error, res);
