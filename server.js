@@ -4,6 +4,7 @@ const multer = require('multer');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const cookieParser = require('cookie-parser'); // Added cookie-parser
 require('dotenv').config();
 
 const app = express();
@@ -13,14 +14,16 @@ const PORT = process.env.PORT || 3000;
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static('public'));
+app.use(cookieParser()); // Add cookie-parser middleware
 
 // Multer for file uploads
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
 
-// In-memory store for active pages
+// In-memory store for active pages and sessions
 const activeAiPages = new Map(); // Key: randomString, Value: { timeout, username }
 const activeAuthPages = new Map(); // Key: randomString, Value: { timeout }
+const sessions = new Map(); // Key: sessionToken, Value: username
 const INACTIVITY_TIMEOUT = 5 * 60 * 1000; // 5 minutes for pages
 const CHAT_EXPIRATION = 7 * 24 * 60 * 60 * 1000; // 1 week in milliseconds
 const MAX_CHATS_PER_USER = 3;
@@ -28,7 +31,7 @@ const MAX_CHATS_PER_USER = 3;
 // In-memory Set to track IPs that have passed the captcha
 const passedIps = new Set();
 
-// In-memory store for chats (keyed by username instead of IP)
+// In-memory store for chats (keyed by username)
 let chats = {};
 const chatsFilePath = path.join(__dirname, 'chats.json');
 
@@ -51,6 +54,11 @@ function generateRandomString() {
         result += characters.charAt(Math.floor(Math.random() * characters.length));
     }
     return result;
+}
+
+// Function to generate a session token (longer for security)
+function generateSessionToken() {
+    return crypto.randomBytes(32).toString('hex');
 }
 
 // Function to log IP address to ip.txt
@@ -84,12 +92,21 @@ function cleanupAuthPage(randomString) {
     }
 }
 
-// Root route: Check if IP has passed captcha, redirect accordingly
+// Root route: Check cookie or IP for authentication
 app.get('/', (req, res) => {
     const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
     logIpAddress(clientIp);
 
-    if (passedIps.has(clientIp)) {
+    const sessionToken = req.cookies.sessionToken;
+    if (sessionToken && sessions.has(sessionToken)) {
+        const username = sessions.get(sessionToken);
+        const randomString = generateRandomString();
+        const timeout = setTimeout(() => {
+            cleanupAiPage(randomString);
+        }, INACTIVITY_TIMEOUT);
+        activeAiPages.set(randomString, { timeout, username });
+        res.redirect(`/ai/${randomString}`);
+    } else if (passedIps.has(clientIp)) {
         const randomString = generateRandomString();
         const timeout = setTimeout(() => {
             cleanupAuthPage(randomString);
@@ -107,7 +124,16 @@ app.get('/captcha/:randomString', (req, res) => {
     const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
     logIpAddress(clientIp);
 
-    if (passedIps.has(clientIp)) {
+    const sessionToken = req.cookies.sessionToken;
+    if (sessionToken && sessions.has(sessionToken)) {
+        const username = sessions.get(sessionToken);
+        const randomString = generateRandomString();
+        const timeout = setTimeout(() => {
+            cleanupAiPage(randomString);
+        }, INACTIVITY_TIMEOUT);
+        activeAiPages.set(randomString, { timeout, username });
+        res.redirect(`/ai/${randomString}`);
+    } else if (passedIps.has(clientIp)) {
         const randomString = generateRandomString();
         const timeout = setTimeout(() => {
             cleanupAuthPage(randomString);
@@ -188,7 +214,10 @@ app.post('/signup', (req, res) => {
     const timeout = setTimeout(() => {
         cleanupAiPage(randomString);
     }, INACTIVITY_TIMEOUT);
-    activeAiPages.set(randomString, { timeout, username }); // Store username with AI page
+    const sessionToken = generateSessionToken();
+    sessions.set(sessionToken, username);
+    activeAiPages.set(randomString, { timeout, username });
+    res.cookie('sessionToken', sessionToken, { maxAge: 10 * 365 * 24 * 60 * 60 * 1000, httpOnly: true }); // 10 years
     res.json({ randomString });
 });
 
@@ -212,7 +241,10 @@ app.post('/login', (req, res) => {
         const timeout = setTimeout(() => {
             cleanupAiPage(randomString);
         }, INACTIVITY_TIMEOUT);
-        activeAiPages.set(randomString, { timeout, username }); // Store username with AI page
+        const sessionToken = generateSessionToken();
+        sessions.set(sessionToken, username);
+        activeAiPages.set(randomString, { timeout, username });
+        res.cookie('sessionToken', sessionToken, { maxAge: 10 * 365 * 24 * 60 * 60 * 1000, httpOnly: true }); // 10 years
         res.json({ randomString });
     } else {
         const usernameExists = credentials.some(line => line.startsWith(`${username}:`));
@@ -224,9 +256,23 @@ app.post('/login', (req, res) => {
     }
 });
 
+// Endpoint to handle signout
+app.post('/signout', (req, res) => {
+    const sessionToken = req.cookies.sessionToken;
+    const { randomString } = req.body;
+    if (sessionToken && sessions.has(sessionToken)) {
+        sessions.delete(sessionToken);
+    }
+    if (randomString) {
+        cleanupAiPage(randomString);
+    }
+    res.clearCookie('sessionToken');
+    res.redirect('/');
+});
+
 // Endpoint to create a new chat
 app.post('/create-chat', (req, res) => {
-    const { randomString } = req.body; // Get randomString from request body
+    const { randomString } = req.body;
     if (!randomString || !activeAiPages.has(randomString)) {
         return res.status(401).json({ error: 'Unauthorized or invalid session' });
     }
@@ -257,7 +303,7 @@ app.post('/create-chat', (req, res) => {
 
 // Endpoint to get all chats for a user
 app.get('/get-chats', (req, res) => {
-    const randomString = req.query.randomString; // Get randomString from query
+    const randomString = req.query.randomString;
     if (!randomString || !activeAiPages.has(randomString)) {
         return res.status(401).json({ error: 'Unauthorized or invalid session' });
     }
