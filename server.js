@@ -267,7 +267,7 @@ app.get('/get-chats', (req, res) => {
         chats[username] = [];
     }
 
-    chats[username] = chats[username].مانی(chat => {
+    chats[username] = chats[username].filter(chat => {
         const age = Date.now() - chat.createdAt;
         return age < CHAT_EXPIRATION;
     });
