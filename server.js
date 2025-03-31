@@ -468,29 +468,65 @@ app.post('/upload', upload.single('file'), async (req, res) => {
         return res.status(400).json({ error: 'No file uploaded' });
     }
 
-    const fileContent = req.file.buffer.toString('utf8');
-    const prompt = req.body.prompt || 'Analyze this file';
-    const message = `${prompt}\n\nFile content:\n${fileContent.substring(0, 1000)}...`;
+    const llamaApiKey = process.env.LLAMA_API_KEY;
+    const deepseekApiKey = process.env.DEEPSEEK_API_KEY;
 
-    const aimlApiKey = process.env.LLAMA_API_KEY; // Using Llama key for consistency
-    if (!aimlApiKey) {
-        return res.status(500).json({ error: 'Server configuration error: AI/ML API key missing' });
+    if (!llamaApiKey || !deepseekApiKey) {
+        return res.status(500).json({ error: 'Server configuration error: API key missing' });
     }
 
-    try {
-        const response = await axios.post('https://api.aimlapi.com/v1/chat/completions', {
-            model: 'o1-preview',
-            messages: [{ role: 'user', content: message }],
-            max_tokens: 512,
-            temperature: 0.7,
-        }, {
-            headers: {
-                'Authorization': `Bearer ${aimlApiKey}`,
-                'Content-Type': 'application/json'
-            }
-        });
+    const fileName = req.file.originalname.toLowerCase();
+    const fileContent = req.file.buffer;
+    const prompt = req.body.prompt || 'Analyze this file';
 
-        const answer = response.data.choices?.[0]?.message?.content || 'No valid response';
+    // Define text and image extensions
+    const textExtensions = ['.txt', '.rtf', '.doc', '.docx', '.odt', '.pdf', '.md', '.tex', '.html', '.htm', '.xml', '.json', '.yaml', '.yml', '.csv', '.sql', '.ini', '.properties', '.env', '.toml'];
+    const imageExtensions = ['.jpg', '.png'];
+
+    const isTextFile = textExtensions.some(ext => fileName.endsWith(ext));
+    const isImageFile = imageExtensions.some(ext => fileName.endsWith(ext));
+
+    try {
+        let response;
+        if (isTextFile) {
+            // Handle text files with Llama
+            const textContent = fileContent.toString('utf8');
+            const message = `${prompt}\n\nFile content:\n${textContent.substring(0, 1000)}...`;
+
+            response = await axios.post('https://api.aimlapi.com/v1/chat/completions', {
+                model: 'meta-llama/Meta-Llama-3.1-405B-Instruct-Turbo',
+                messages: [{ role: 'user', content: message }],
+                max_tokens: 512,
+                temperature: 0.7,
+            }, {
+                headers: {
+                    'Authorization': `Bearer ${llamaApiKey}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+        } else if (isImageFile) {
+            // Handle images with DeepSeek
+            // AIML API might not support direct image binary input; we'll assume it accepts a base64-encoded string or text description
+            const base64Image = fileContent.toString('base64');
+            const message = `${prompt}\n\nImage content (base64): ${base64Image.substring(0, 1000)}...`;
+
+            response = await axios.post('https://api.aimlapi.com/v1/chat/completions', {
+                model: 'deepseek/deepseek-r1',
+                messages: [{ role: 'user', content: message }],
+                max_tokens: 512,
+                temperature: 0.7,
+            }, {
+                headers: {
+                    'Authorization': `Bearer ${deepseekApiKey}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+        } else {
+            return res.status(400).json({ error: 'Unsupported file type. Please upload a text file or image.' });
+        }
+
+        const answer = response.data.choices?.[0]?.message?.content || 'Failed to process file';
+        console.log('Upload Response:', answer);
         res.json({ answer });
     } catch (error) {
         handleError(error, res);
