@@ -4,7 +4,7 @@ const multer = require('multer');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
-const cookieParser = require('cookie-parser'); // Added cookie-parser
+const cookieParser = require('cookie-parser');
 require('dotenv').config();
 
 const app = express();
@@ -14,7 +14,7 @@ const PORT = process.env.PORT || 3000;
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static('public'));
-app.use(cookieParser()); // Add cookie-parser middleware
+app.use(cookieParser());
 
 // Multer for file uploads
 const storage = multer.memoryStorage();
@@ -353,37 +353,95 @@ app.post('/cleanup-ai-page', (req, res) => {
     res.sendStatus(200);
 });
 
+// Updated /generate endpoint
 app.post('/generate', async (req, res) => {
     const { message } = req.body;
     if (!message) {
         return res.status(400).json({ error: 'No message provided' });
     }
 
-    const aimlApiKey = process.env.AIML_API_KEY;
-    if (!aimlApiKey) {
-        return res.status(500).json({ error: 'Server configuration error: AI/ML API key missing' });
+    const gptApiKey = process.env.GPT_API_KEY;
+    const deepseekApiKey = process.env.DEEPSEEK_API_KEY;
+    const geminiApiKey = process.env.GEMINI_API_KEY;
+    const llamaApiKey = process.env.LLAMA_API_KEY;
+
+    if (!gptApiKey || !deepseekApiKey || !geminiApiKey || !llamaApiKey) {
+        return res.status(500).json({ error: 'Server configuration error: One or more API keys missing' });
     }
 
     try {
-        const response = await axios.post('https://api.aimlapi.com/v1/chat/completions', {
-            model: 'meta-llama/Llama-3.3-70B-Instruct-Turbo',
-            messages: [{ role: 'user', content: message }],
+        // Concurrently fetch responses from GPT-4.5-preview, DeepSeek R1, and Gemini-1.5-pro
+        const [gptResponse, deepseekResponse, geminiResponse] = await Promise.all([
+            axios.post('https://api.openai.com/v1/chat/completions', {
+                model: 'gpt-4.5-preview', // Adjust model name if needed
+                messages: [{ role: 'user', content: message }],
+                max_tokens: 512,
+                temperature: 0.7,
+            }, {
+                headers: {
+                    'Authorization': `Bearer ${gptApiKey}`,
+                    'Content-Type': 'application/json'
+                }
+            }).catch(() => ({ data: { choices: [{ message: { content: 'GPT-4.5 failed to respond' } }] } })),
+            
+            axios.post('https://api.deepseek.com/v1/chat/completions', {
+                model: 'deepseek-r1',
+                messages: [{ role: 'user', content: message }],
+                max_tokens: 512,
+                temperature: 0.7,
+            }, {
+                headers: {
+                    'Authorization': `Bearer ${deepseekApiKey}`,
+                    'Content-Type': 'application/json'
+                }
+            }).catch(() => ({ data: { choices: [{ message: { content: 'DeepSeek failed to respond' } }] } })),
+            
+            axios.post('https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent', {
+                contents: [{ parts: [{ text: message }] }],
+            }, {
+                headers: {
+                    'Authorization': `Bearer ${geminiApiKey}`,
+                    'Content-Type': 'application/json'
+                }
+            }).catch(() => ({ data: { candidates: [{ content: { parts: [{ text: 'Gemini failed to respond' }] } }] } })),
+        ]);
+
+        // Extract responses
+        const gptText = gptResponse.data.choices?.[0]?.message?.content || 'No valid response from GPT';
+        const deepseekText = deepseekResponse.data.choices?.[0]?.message?.content || 'No valid response from DeepSeek';
+        const geminiText = geminiResponse.data.candidates?.[0]?.content?.parts?.[0]?.text || 'No valid response from Gemini';
+
+        // Construct prompt for Llama
+        const llamaPrompt = `
+Hello llama ai here i have generated responses from other ai can you combine these responses and generate me a response combined with all these responses with out saying at the beginning for example "Sure i will combine these responses.." e.t.c just the combined response nothing else here is the responses from other ai's
+
+responses:
+GPT-4.5-preview: ${gptText}
+DeepSeek R1: ${deepseekText}
+Gemini-1.5-pro: ${geminiText}
+`;
+
+        // Call Meta-Llama-3.1-405B-Instruct-Turbo
+        const llamaResponse = await axios.post('https://api.aimlapi.com/v1/chat/completions', {
+            model: 'meta-llama/Meta-Llama-3.1-405B-Instruct-Turbo',
+            messages: [{ role: 'user', content: llamaPrompt }],
             max_tokens: 512,
             temperature: 0.7,
         }, {
             headers: {
-                'Authorization': `Bearer ${aimlApiKey}`,
+                'Authorization': `Bearer ${llamaApiKey}`,
                 'Content-Type': 'application/json'
             }
         });
 
-        const answer = response.data.choices?.[0]?.message?.content || 'No valid response';
-        res.json({ answer });
+        const finalAnswer = llamaResponse.data.choices?.[0]?.message?.content || 'No valid response from Llama';
+        res.json({ answer: finalAnswer });
     } catch (error) {
         handleError(error, res);
     }
 });
 
+// Existing /upload endpoint (unchanged)
 app.post('/upload', upload.single('file'), async (req, res) => {
     if (!req.file) {
         return res.status(400).json({ error: 'No file uploaded' });
@@ -393,7 +451,7 @@ app.post('/upload', upload.single('file'), async (req, res) => {
     const prompt = req.body.prompt || 'Analyze this file';
     const message = `${prompt}\n\nFile content:\n${fileContent.substring(0, 1000)}...`;
 
-    const aimlApiKey = process.env.AIML_API_KEY;
+    const aimlApiKey = process.env.LLAMA_API_KEY; // Using Llama key for consistency
     if (!aimlApiKey) {
         return res.status(500).json({ error: 'Server configuration error: AI/ML API key missing' });
     }
@@ -420,19 +478,19 @@ app.post('/upload', upload.single('file'), async (req, res) => {
 
 function handleError(error, res) {
     if (error.response) {
-        console.error('AI/ML API error:', error.response.data);
+        console.error('API error:', error.response.data);
         if (error.response.status === 403 || error.response.status === 429) {
             res.status(error.response.status).json({
-                error: 'AI/ML API usage limit reached or access denied.'
+                error: 'API usage limit reached or access denied.'
             });
         } else {
             res.status(error.response.status).json({ error: error.response.data.message || 'Error' });
         }
     } else if (error.request) {
-        console.error('No response from AI/ML API:', error.request);
-        res.status(500).json({ error: 'No response from AI/ML API.' });
+        console.error('No response from API:', error.request);
+        res.status(500).json({ error: 'No response from API.' });
     } else {
-        console.error('Error setting up AI/ML API request:', error.message);
+        console.error('Error setting up API request:', error.message);
         res.status(500).json({ error: 'Error setting up request: ' + error.message });
     }
 }
