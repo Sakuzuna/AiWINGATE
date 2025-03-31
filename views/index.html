@@ -6,6 +6,21 @@
     <title>Wingate AI</title>
     <link rel='stylesheet' href='https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap'>
     <link rel="stylesheet" href="/styles.css">
+    <style>
+        .signout-btn {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 0.5em 1em;
+            background: #d63333;
+            color: white;
+            border: none;
+            border-radius: 20px;
+            font-weight: 600;
+            cursor: pointer;
+            z-index: 1000;
+        }
+    </style>
 </head>
 <body>
     <div class="screen-1">
@@ -30,6 +45,7 @@
             <p><strong>DISCLAIMER:</strong> Please note that this AI operates on a free API key, which may have usage limitations. To ensure optimal performance and availability, we kindly ask that you limit your requests. For any inquiries or support, feel free to contact me on Telegram at @neonworid. Thank you for your understanding!</p>
         </div>
     </div>
+    <button class="signout-btn" id="signout-btn">Sign Out</button>
 
     <audio id="online-sound" src="/online.mp3" preload="auto"></audio>
 
@@ -57,6 +73,7 @@
         const fileStatus = document.getElementById('file-status');
         const chatSelect = document.getElementById('chat-select');
         const newChatButton = document.getElementById('new-chat-btn');
+        const signoutButton = document.getElementById('signout-btn');
         let attachedFile = null;
         let messageCounter = 0;
         let currentChatId = null;
@@ -104,6 +121,24 @@
             } catch (error) {
                 console.error('Error creating chat:', error);
                 alert('Failed to create new chat.');
+            }
+        });
+
+        signoutButton.addEventListener('click', async () => {
+            try {
+                const response = await fetch('/signout', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ randomString })
+                });
+                if (response.ok) {
+                    window.location.href = '/';
+                } else {
+                    alert('Failed to sign out. Please try again.');
+                }
+            } catch (error) {
+                console.error('Error signing out:', error);
+                alert('Failed to sign out.');
             }
         });
 
