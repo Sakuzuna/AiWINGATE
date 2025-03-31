@@ -9,7 +9,7 @@
   },
   "dependencies": {
     "axios": "^1.6.8",
-    "cookie-parser": "^1.4.6", // Added this
+    "cookie-parser": ^1.4.6, // Missing quotes around version
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
     "multer": "^1.4.5-lts.1"
