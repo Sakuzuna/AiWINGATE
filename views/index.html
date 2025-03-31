@@ -17,6 +17,19 @@
         }
 
         /* Sliding Menu */
+        .menu-toggle {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: #3e4684;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            padding: 10px;
+            cursor: pointer;
+            z-index: 1001;
+        }
+
         .sidebar {
             position: fixed;
             top: 0;
@@ -36,16 +49,6 @@
             left: 0;
         }
 
-        .menu-toggle {
-            background: #3e4684;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            padding: 10px;
-            cursor: pointer;
-            margin-bottom: 20px;
-        }
-
         .sidebar button, .sidebar select {
             margin: 10px 0;
             padding: 10px;
@@ -63,20 +66,9 @@
             border: 1px solid #e6e9f9;
         }
 
-        /* Sign-Out Button at Bottom of Page */
         .signout-btn {
-            position: fixed;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
+            margin-top: auto;
             background: #d63333;
-            color: white;
-            border: none;
-            border-radius: 20px;
-            padding: 10px 20px;
-            cursor: pointer;
-            font-weight: 600;
-            z-index: 999;
         }
 
         /* Chat Interface */
@@ -233,13 +225,16 @@
     </style>
 </head>
 <body>
+    <!-- Menu Toggle Button -->
+    <button class="menu-toggle" onclick="toggleMenu()">☰</button>
+
     <!-- Sliding Menu -->
     <div class="sidebar" id="sidebar">
-        <button class="menu-toggle" onclick="toggleMenu()">☰</button>
         <button id="new-chat-btn">New Chat</button>
         <select id="chat-select">
             <option value="">Select a chat</option>
         </select>
+        <button class="signout-btn" id="signout-btn">Sign Out</button>
     </div>
 
     <!-- Chat Interface -->
@@ -256,7 +251,6 @@
             <button id="send">Send</button>
         </div>
         <div id="file-status" style="margin-top: 10px; color: #4d4d4d;"></div>
-        <button class="signout-btn" id="signout-btn">Sign Out</button>
     </div>
 
     <audio id="online-sound" src="/online.mp3" preload="auto"></audio>
