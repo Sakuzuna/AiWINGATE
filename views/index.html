@@ -7,51 +7,275 @@
     <link rel='stylesheet' href='https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap'>
     <link rel="stylesheet" href="/styles.css">
     <style>
-        .signout-btn {
+        body {
+            margin: 0;
+            padding: 0;
+            background: #dde5f4;
+            font-family: "Poppins", sans-serif;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        /* Sliding Menu */
+        .menu-toggle {
             position: fixed;
-            bottom: 20px;
-            right: 20px;
-            padding: 0.5em 1em;
+            top: 20px;
+            left: 20px;
+            background: #3e4684;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            padding: 10px;
+            cursor: pointer;
+            z-index: 1001;
+        }
+
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: -250px;
+            width: 250px;
+            height: 100vh;
+            background: #f1f7fe;
+            box-shadow: 2px 0 5px rgba(0, 0, 0, 0.2);
+            transition: left 0.3s ease;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+        }
+
+        .sidebar.open {
+            left: 0;
+        }
+
+        .sidebar button, .sidebar select {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 20px;
+            border: none;
+            background: #3e4684;
+            color: white;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        .sidebar select {
+            background: white;
+            color: #4d4d4d;
+            border: 1px solid #e6e9f9;
+        }
+
+        .signout-btn {
+            margin-top: auto;
             background: #d63333;
+        }
+
+        /* Chat Interface */
+        .chat-container {
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .logo-container {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .logo {
+            width: 150px;
+            height: auto;
+        }
+
+        .ai-name {
+            font-size: 24px;
+            font-weight: 600;
+            color: #3e4684;
+            margin-top: 10px;
+        }
+
+        .chat-box {
+            width: 80%;
+            max-width: 800px;
+            height: 60vh;
+            background: white;
+            box-shadow: 0 0 2em #e6e9f9;
+            padding: 20px;
+            border-radius: 20px;
+            overflow-y: auto;
+            margin-bottom: 20px;
+        }
+
+        .message {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 10px;
+            max-width: 80%;
+        }
+
+        .message.user {
+            background: #e6e9f9;
+            align-self: flex-end;
+            margin-left: auto;
+        }
+
+        .message.ai {
+            background: #f1f7fe;
+            align-self: flex-start;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .message-content {
+            word-wrap: break-word;
+        }
+
+        /* Code Block Styling */
+        .code-block {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 10px;
+            border-radius: 5px;
+            position: relative;
+            margin-top: 5px;
+            font-family: 'Courier New', Courier, monospace;
+            white-space: pre-wrap;
+        }
+
+        .code-block-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #333;
+            padding: 5px 10px;
+            border-top-left-radius: 5px;
+            border-top-right-radius: 5px;
+            color: white;
+            font-size: 12px;
+        }
+
+        .code-block .copy-btn {
+            background: #3e4684;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .input-area {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            width: 80%;
+            max-width: 800px;
+        }
+
+        .input-area input[type="text"] {
+            flex-grow: 1;
+            padding: 10px;
+            outline: none;
+            border: none;
+            border-radius: 20px;
+            background: white;
+            box-shadow: 0 0 2em #e6e9f9;
+        }
+
+        .input-area button {
+            padding: 10px 20px;
+            background: #3e4684;
             color: white;
             border: none;
             border-radius: 20px;
             font-weight: 600;
             cursor: pointer;
-            z-index: 1000;
+        }
+
+        .input-area #upload-btn {
+            background: #4CAF50;
+        }
+
+        /* Snowflakes */
+        .snowflake {
+            position: absolute;
+            color: white;
+            font-size: 1em;
+            opacity: 0.3;
+            pointer-events: none;
+            animation: fall linear infinite;
+        }
+
+        @keyframes fall {
+            0% {
+                transform: translateY(-100vh);
+                opacity: 0.3;
+            }
+            100% {
+                transform: translateY(100vh);
+                opacity: 0;
+            }
         }
     </style>
 </head>
 <body>
-    <div class="screen-1">
-        <img src="/logo.gif" alt="Wingate AI Logo" class="logo">
-        <div class="chat-container">
-            <div class="chat-selector">
-                <button id="new-chat-btn">New Chat</button>
-                <select id="chat-select">
-                    <option value="">Select a chat</option>
-                </select>
-            </div>
-            <div id="chat-box" class="chat-box"></div>
-            <div class="input-area">
-                <input type="text" id="prompt" placeholder="Type your message...">
-                <input type="file" id="file-upload" accept=".txt,.rtf,.doc,.docx,.odt,.pdf,.md,.tex,.html,.htm,.xml,.json,.yaml,.yml,.csv,.sql,.ini,.properties,.env,.toml,.jpg,.png" style="display: none;">
-                <button id="upload-btn">🗀</button>
-                <button id="send">Send</button>
-            </div>
-            <div id="file-status" style="margin-top: 10px; color: #4d4d4d;"></div>
-        </div>
-        <div class="disclaimer">
-            <p><strong>DISCLAIMER:</strong> Please note that this AI operates on a free API key, which may have usage limitations. To ensure optimal performance and availability, we kindly ask that you limit your requests. For any inquiries or support, feel free to contact me on Telegram at @neonworid. Thank you for your understanding!</p>
-        </div>
+    <!-- Sliding Menu -->
+    <button class="menu-toggle" onclick="toggleMenu()">☰</button>
+    <div class="sidebar" id="sidebar">
+        <button id="new-chat-btn">New Chat</button>
+        <select id="chat-select">
+            <option value="">Select a chat</option>
+        </select>
+        <button class="signout-btn" id="signout-btn">Sign Out</button>
     </div>
-    <button class="signout-btn" id="signout-btn">Sign Out</button>
+
+    <!-- Chat Interface -->
+    <div class="chat-container">
+        <div class="logo-container">
+            <img src="/logo.gif" alt="Wingate AI Logo" class="logo">
+            <div class="ai-name">Wingate AI</div>
+        </div>
+        <div id="chat-box" class="chat-box"></div>
+        <div class="input-area">
+            <button id="upload-btn">🗀</button>
+            <input type="text" id="prompt" placeholder="Type your message...">
+            <input type="file" id="file-upload" accept=".txt,.rtf,.doc,.docx,.odt,.pdf,.md,.tex,.html,.htm,.xml,.json,.yaml,.yml,.csv,.sql,.ini,.properties,.env,.toml,.jpg,.png" style="display: none;">
+            <button id="send">Send</button>
+        </div>
+        <div id="file-status" style="margin-top: 10px; color: #4d4d4d;"></div>
+    </div>
 
     <audio id="online-sound" src="/online.mp3" preload="auto"></audio>
 
     <script type="module" src="https://unpkg.com/ionicons@5.5.2/dist/ionicons/ionicons.esm.js"></script>
     <script nomodule src="https://unpkg.com/ionicons@5.5.2/dist/ionicons/ionicons.js"></script>
     <script>
+        // Menu Toggle
+        function toggleMenu() {
+            const sidebar = document.getElementById('sidebar');
+            sidebar.classList.toggle('open');
+        }
+
+        // Snowflakes
+        function createSnowflake() {
+            const snowflake = document.createElement('div');
+            snowflake.className = 'snowflake';
+            snowflake.innerHTML = '❄';
+            snowflake.style.left = Math.random() * 100 + 'vw';
+            snowflake.style.animationDuration = Math.random() * 5 + 5 + 's';
+            snowflake.style.fontSize = Math.random() * 10 + 5 + 'px';
+            document.body.appendChild(snowflake);
+            setTimeout(() => snowflake.remove(), 10000);
+        }
+
+        setInterval(createSnowflake, 500);
+
         window.addEventListener('load', () => {
             const sound = document.getElementById('online-sound');
             sound.play().catch(error => {
@@ -178,15 +402,36 @@
                     chat.messages.forEach(msg => {
                         messageCounter++;
                         const messageId = `message-${messageCounter}`;
-                        const messageHtml = msg.isUser
-                            ? `<div class="message user">You: ${msg.content}</div>`
-                            : `
+                        const isCode = msg.content.includes('```');
+                        let messageHtml;
+
+                        if (msg.isUser) {
+                            messageHtml = `<div class="message user">You: ${msg.content}</div>`;
+                        } else if (isCode) {
+                            const codeContent = msg.content.replace(/```[\s\S]*?```/g, (match) => {
+                                const code = match.replace(/```/g, '').trim();
+                                return `
+                                    <div class="code-block">
+                                        <div class="code-block-header">
+                                            <span>Code</span>
+                                            <button class="copy-btn" onclick="copyToClipboard('${messageId}-code')">Copy</button>
+                                        </div>
+                                        <pre id="${messageId}-code">${code}</pre>
+                                    </div>`;
+                            });
+                            messageHtml = `
+                                <div class="message ai">
+                                    <div class="message-content">Wingate AI: ${codeContent}</div>
+                                </div>`;
+                        } else {
+                            messageHtml = `
                                 <div class="message ai">
                                     <div id="${messageId}" class="message-content">Wingate AI: ${msg.content}</div>
                                     <div class="button-container">
                                         <button class="copy-btn" onclick="copyToClipboard('${messageId}')">Copy</button>
                                     </div>
                                 </div>`;
+                        }
                         chatBox.innerHTML += messageHtml;
                     });
                     chatBox.scrollTop = chatBox.scrollHeight;
@@ -218,51 +463,67 @@
                 }
                 chatBox.scrollTop = chatBox.scrollHeight;
 
-                const reader = new FileReader();
-                reader.onload = async (event) => {
-                    const fileContent = event.target.result;
-                    const formData = new FormData();
-                    formData.append('file', file);
-                    formData.append('prompt', prompt || 'Analyze this file');
-                    formData.append('fileContent', fileContent);
+                const formData = new FormData();
+                formData.append('file', file);
+                formData.append('prompt', prompt || 'Analyze this file');
 
-                    try {
-                        const response = await fetch('/upload', {
-                            method: 'POST',
-                            body: formData
+                try {
+                    const response = await fetch('/upload', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    const result = await response.json();
+                    const aiMessage = result.answer || result.error || 'Error';
+                    const isCode = aiMessage.includes('```');
+                    let messageHtml;
+
+                    if (isCode) {
+                        const codeContent = aiMessage.replace(/```[\s\S]*?```/g, (match) => {
+                            const code = match.replace(/```/g, '').trim();
+                            return `
+                                <div class="code-block">
+                                    <div class="code-block-header">
+                                        <span>Code</span>
+                                        <button class="copy-btn" onclick="copyToClipboard('${messageId}-code')">Copy</button>
+                                    </div>
+                                    <pre id="${messageId}-code">${code}</pre>
+                                </div>`;
                         });
-                        const result = await response.json();
-                        const aiMessage = result.answer || result.error || 'Error';
-                        chatBox.innerHTML += `
+                        messageHtml = `
+                            <div class="message ai">
+                                <div class="message-content">Wingate AI: ${codeContent}</div>
+                            </div>`;
+                    } else {
+                        messageHtml = `
                             <div class="message ai">
                                 <div id="${messageId}" class="message-content">Wingate AI: ${aiMessage}</div>
                                 <div class="button-container">
                                     <button class="copy-btn" onclick="copyToClipboard('${messageId}')">Copy</button>
                                 </div>
                             </div>`;
-                        await fetch('/save-message', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ chatId: currentChatId, message: aiMessage, isUser: false, randomString })
-                        });
-                    } catch (error) {
-                        chatBox.innerHTML += `
-                            <div class="message ai">
-                                <div id="${messageId}" class="message-content">Wingate AI: Failed to connect. Please try again.</div>
-                                <div class="button-container">
-                                    <button class="copy-btn" onclick="copyToClipboard('${messageId}')">Copy</button>
-                                </div>
-                            </div>`;
-                        await fetch('/save-message', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ chatId: currentChatId, message: 'Failed to connect. Please try again.', isUser: false, randomString })
-                        });
-                        console.error('Error:', error);
                     }
-                    chatBox.scrollTop = chatBox.scrollHeight;
-                };
-                reader.readAsText(file);
+                    chatBox.innerHTML += messageHtml;
+                    await fetch('/save-message', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ chatId: currentChatId, message: aiMessage, isUser: false, randomString })
+                    });
+                } catch (error) {
+                    chatBox.innerHTML += `
+                        <div class="message ai">
+                            <div id="${messageId}" class="message-content">Wingate AI: Failed to connect. Please try again.</div>
+                            <div class="button-container">
+                                <button class="copy-btn" onclick="copyToClipboard('${messageId}')">Copy</button>
+                            </div>
+                        </div>`;
+                    await fetch('/save-message', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ chatId: currentChatId, message: 'Failed to connect. Please try again.', isUser: false, randomString })
+                    });
+                    console.error('Error:', error);
+                }
+                chatBox.scrollTop = chatBox.scrollHeight;
             } else if (prompt) {
                 chatBox.innerHTML += `<div class="message user">You: ${prompt}</div>`;
                 await fetch('/save-message', {
@@ -280,13 +541,35 @@
                     });
                     const result = await response.json();
                     const aiMessage = result.answer || result.error || 'Error';
-                    chatBox.innerHTML += `
-                        <div class="message ai">
-                            <div id="${messageId}" class="message-content">Wingate AI: ${aiMessage}</div>
-                            <div class="button-container">
-                                <button class="copy-btn" onclick="copyToClipboard('${messageId}')">Copy</button>
-                            </div>
-                        </div>`;
+                    const isCode = aiMessage.includes('```');
+                    let messageHtml;
+
+                    if (isCode) {
+                        const codeContent = aiMessage.replace(/```[\s\S]*?```/g, (match) => {
+                            const code = match.replace(/```/g, '').trim();
+                            return `
+                                <div class="code-block">
+                                    <div class="code-block-header">
+                                        <span>Code</span>
+                                        <button class="copy-btn" onclick="copyToClipboard('${messageId}-code')">Copy</button>
+                                    </div>
+                                    <pre id="${messageId}-code">${code}</pre>
+                                </div>`;
+                        });
+                        messageHtml = `
+                            <div class="message ai">
+                                <div class="message-content">Wingate AI: ${codeContent}</div>
+                            </div>`;
+                    } else {
+                        messageHtml = `
+                            <div class="message ai">
+                                <div id="${messageId}" class="message-content">Wingate AI: ${aiMessage}</div>
+                                <div class="button-container">
+                                    <button class="copy-btn" onclick="copyToClipboard('${messageId}')">Copy</button>
+                                </div>
+                            </div>`;
+                    }
+                    chatBox.innerHTML += messageHtml;
                     await fetch('/save-message', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -311,9 +594,9 @@
             }
         }
 
-        function copyToClipboard(messageId) {
-            const messageElement = document.getElementById(messageId);
-            const text = messageElement.textContent.replace('Wingate AI: ', '');
+        function copyToClipboard(elementId) {
+            const element = document.getElementById(elementId);
+            const text = element.textContent;
             navigator.clipboard.writeText(text).then(() => {
                 alert('Copied to clipboard!');
             }).catch(err => {
@@ -321,5 +604,5 @@
             });
         }
     </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'928c8eedcc8e44dc',t:'MTc0MzM4OTYyNi4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</body>
 </html>
