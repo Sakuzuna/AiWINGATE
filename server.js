@@ -353,7 +353,7 @@ app.post('/cleanup-ai-page', (req, res) => {
     res.sendStatus(200);
 });
 
-// Updated /generate endpoint
+// Updated /generate endpoint with corrected model names
 app.post('/generate', async (req, res) => {
     const { message } = req.body;
     if (!message) {
@@ -388,7 +388,7 @@ app.post('/generate', async (req, res) => {
             }),
 
             axios.post('https://api.aimlapi.com/v1/chat/completions', {
-                model: 'deepseek-r1',
+                model: 'deepseek/deepseek-r1',
                 messages: [{ role: 'user', content: message }],
                 max_tokens: 512,
                 temperature: 0.7,
