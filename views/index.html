@@ -90,7 +90,8 @@
             try {
                 const response = await fetch('/create-chat', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' }
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ randomString })
                 });
                 const result = await response.json();
                 if (result.chatId) {
@@ -113,7 +114,7 @@
 
         async function loadChats() {
             try {
-                const response = await fetch('/get-chats');
+                const response = await fetch(`/get-chats?randomString=${randomString}`);
                 const userChats = await response.json();
                 chatSelect.innerHTML = '<option value="">Select a chat</option>';
                 userChats.forEach(chat => {
@@ -135,7 +136,7 @@
         async function loadChatMessages() {
             chatBox.innerHTML = '';
             try {
-                const response = await fetch('/get-chats');
+                const response = await fetch(`/get-chats?randomString=${randomString}`);
                 const userChats = await response.json();
                 const chat = userChats.find(c => c.id === currentChatId);
                 if (chat) {
@@ -169,7 +170,7 @@
                 await fetch('/save-message', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ chatId: currentChatId, message: `Attached file: ${file.name}`, isUser: true })
+                    body: JSON.stringify({ chatId: currentChatId, message: `Attached file: ${file.name}`, isUser: true, randomString })
                 });
 
                 if (prompt) {
@@ -177,7 +178,7 @@
                     await fetch('/save-message', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ chatId: currentChatId, message: prompt, isUser: true })
+                        body: JSON.stringify({ chatId: currentChatId, message: prompt, isUser: true, randomString })
                     });
                 }
                 chatBox.scrollTop = chatBox.scrollHeight;
@@ -207,7 +208,7 @@
                         await fetch('/save-message', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ chatId: currentChatId, message: aiMessage, isUser: false })
+                            body: JSON.stringify({ chatId: currentChatId, message: aiMessage, isUser: false, randomString })
                         });
                     } catch (error) {
                         chatBox.innerHTML += `
@@ -220,7 +221,7 @@
                         await fetch('/save-message', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ chatId: currentChatId, message: 'Failed to connect. Please try again.', isUser: false })
+                            body: JSON.stringify({ chatId: currentChatId, message: 'Failed to connect. Please try again.', isUser: false, randomString })
                         });
                         console.error('Error:', error);
                     }
@@ -232,7 +233,7 @@
                 await fetch('/save-message', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ chatId: currentChatId, message: prompt, isUser: true })
+                    body: JSON.stringify({ chatId: currentChatId, message: prompt, isUser: true, randomString })
                 });
                 chatBox.scrollTop = chatBox.scrollHeight;
 
@@ -254,7 +255,7 @@
                     await fetch('/save-message', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ chatId: currentChatId, message: aiMessage, isUser: false })
+                        body: JSON.stringify({ chatId: currentChatId, message: aiMessage, isUser: false, randomString })
                     });
                 } catch (error) {
                     chatBox.innerHTML += `
@@ -267,7 +268,7 @@
                     await fetch('/save-message', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ chatId: currentChatId, message: 'Failed to connect. Please try again.', isUser: false })
+                        body: JSON.stringify({ chatId: currentChatId, message: 'Failed to connect. Please try again.', isUser: false, randomString })
                     });
                     console.error('Error:', error);
                 }
@@ -285,5 +286,5 @@
             });
         }
     </script>
-</body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'928c8eedcc8e44dc',t:'MTc0MzM4OTYyNi4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
