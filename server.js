@@ -24,7 +24,7 @@ const upload = multer({ storage: storage });
 const activeAiPages = new Map(); // Key: randomString, Value: { timeout, username }
 const activeAuthPages = new Map(); // Key: randomString, Value: { timeout }
 const sessions = new Map(); // Key: sessionToken, Value: username
-const INACTIVITY_TIMEOUT = 5 * 60 * 1000; // 5 minutes for pages
+const INACTIVITY_TIMEOUT = 2 * 24 * 60 * 60 * 1000; // 2 days
 const CHAT_EXPIRATION = 7 * 24 * 60 * 60 * 1000; // 1 week in milliseconds
 const MAX_CHATS_PER_USER = 3;
 
