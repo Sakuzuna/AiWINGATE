@@ -3,7 +3,7 @@ const axios = require('axios');
 const multer = require('multer');
 const fs = require('fs');
 const path = require('path');
-const crypto = require('crypto'); // Added for SHA-256 hashing
+const crypto = require('crypto');
 require('dotenv').config();
 
 const app = express();
@@ -19,8 +19,8 @@ const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
 
 // In-memory store for active pages
-const activeAiPages = new Map(); // Key: randomString, Value: { timeout }
-const activeAuthPages = new Map(); // Combined signup/login pages
+const activeAiPages = new Map(); // Key: randomString, Value: { timeout, username }
+const activeAuthPages = new Map(); // Key: randomString, Value: { timeout }
 const INACTIVITY_TIMEOUT = 5 * 60 * 1000; // 5 minutes for pages
 const CHAT_EXPIRATION = 7 * 24 * 60 * 60 * 1000; // 1 week in milliseconds
 const MAX_CHATS_PER_USER = 3;
@@ -28,7 +28,7 @@ const MAX_CHATS_PER_USER = 3;
 // In-memory Set to track IPs that have passed the captcha
 const passedIps = new Set();
 
-// In-memory store for chats (in production, use a database)
+// In-memory store for chats (keyed by username instead of IP)
 let chats = {};
 const chatsFilePath = path.join(__dirname, 'chats.json');
 
@@ -152,7 +152,7 @@ app.get('/ai/:randomString', (req, res) => {
     const timeout = setTimeout(() => {
         cleanupAiPage(randomString);
     }, INACTIVITY_TIMEOUT);
-    activeAiPages.set(randomString, { timeout });
+    activeAiPages.set(randomString, { timeout, username: activeAiPages.get(randomString).username });
 
     res.sendFile(path.join(__dirname, 'views', 'index.html'));
 });
@@ -178,7 +178,6 @@ app.post('/signup', (req, res) => {
         return res.status(400).json({ error: 'Username and password are required' });
     }
 
-    // Hash the password before storing
     const hashedPassword = hashPassword(password);
     const passFilePath = path.join(__dirname, 'pass.txt');
     const entry = `${username}:${hashedPassword}\n`;
@@ -189,7 +188,7 @@ app.post('/signup', (req, res) => {
     const timeout = setTimeout(() => {
         cleanupAiPage(randomString);
     }, INACTIVITY_TIMEOUT);
-    activeAiPages.set(randomString, { timeout });
+    activeAiPages.set(randomString, { timeout, username }); // Store username with AI page
     res.json({ randomString });
 });
 
@@ -202,11 +201,7 @@ app.post('/login', (req, res) => {
 
     const passFilePath = path.join(__dirname, 'pass.txt');
     const credentials = fs.existsSync(passFilePath) ? fs.readFileSync(passFilePath, 'utf8').split('\n') : [];
-    
-    // Hash the input password
     const hashedInputPassword = hashPassword(password);
-    
-    // Find matching username and hashed password
     const userEntry = credentials.find(line => {
         const [storedUsername, storedPassword] = line.split(':');
         return storedUsername === username && storedPassword === hashedInputPassword;
@@ -217,10 +212,9 @@ app.post('/login', (req, res) => {
         const timeout = setTimeout(() => {
             cleanupAiPage(randomString);
         }, INACTIVITY_TIMEOUT);
-        activeAiPages.set(randomString, { timeout });
+        activeAiPages.set(randomString, { timeout, username }); // Store username with AI page
         res.json({ randomString });
     } else {
-        // Check if username exists to provide more specific error
         const usernameExists = credentials.some(line => line.startsWith(`${username}:`));
         if (usernameExists) {
             res.status(401).json({ error: 'Invalid password' });
@@ -232,24 +226,27 @@ app.post('/login', (req, res) => {
 
 // Endpoint to create a new chat
 app.post('/create-chat', (req, res) => {
-    const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
-    if (!chats[clientIp]) {
-        chats[clientIp] = [];
+    const { randomString } = req.body; // Get randomString from request body
+    if (!randomString || !activeAiPages.has(randomString)) {
+        return res.status(401).json({ error: 'Unauthorized or invalid session' });
     }
 
-    // Check for expired chats and remove them
-    chats[clientIp] = chats[clientIp].filter(chat => {
+    const username = activeAiPages.get(randomString).username;
+    if (!chats[username]) {
+        chats[username] = [];
+    }
+
+    chats[username] = chats[username].filter(chat => {
         const age = Date.now() - chat.createdAt;
         return age < CHAT_EXPIRATION;
     });
 
-    // Check chat limit
-    if (chats[clientIp].length >= MAX_CHATS_PER_USER) {
+    if (chats[username].length >= MAX_CHATS_PER_USER) {
         return res.status(403).json({ error: 'Chat limit reached. Delete an old chat to create a new one.' });
     }
 
     const chatId = generateRandomString();
-    chats[clientIp].push({
+    chats[username].push({
         id: chatId,
         createdAt: Date.now(),
         messages: []
@@ -260,31 +257,38 @@ app.post('/create-chat', (req, res) => {
 
 // Endpoint to get all chats for a user
 app.get('/get-chats', (req, res) => {
-    const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
-    if (!chats[clientIp]) {
-        chats[clientIp] = [];
+    const randomString = req.query.randomString; // Get randomString from query
+    if (!randomString || !activeAiPages.has(randomString)) {
+        return res.status(401).json({ error: 'Unauthorized or invalid session' });
     }
 
-    // Remove expired chats
-    chats[clientIp] = chats[clientIp].filter(chat => {
+    const username = activeAiPages.get(randomString).username;
+    if (!chats[username]) {
+        chats[username] = [];
+    }
+
+    chats[username] = chats[username].مانی(chat => {
         const age = Date.now() - chat.createdAt;
         return age < CHAT_EXPIRATION;
     });
     saveChats();
 
-    res.json(chats[clientIp]);
+    res.json(chats[username]);
 });
 
 // Endpoint to save a message to a chat
 app.post('/save-message', (req, res) => {
-    const { chatId, message, isUser } = req.body;
-    const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+    const { chatId, message, isUser, randomString } = req.body;
+    if (!randomString || !activeAiPages.has(randomString)) {
+        return res.status(401).json({ error: 'Unauthorized or invalid session' });
+    }
 
-    if (!chats[clientIp]) {
+    const username = activeAiPages.get(randomString).username;
+    if (!chats[username]) {
         return res.status(404).json({ error: 'Chat not found' });
     }
 
-    const chat = chats[clientIp].find(c => c.id === chatId);
+    const chat = chats[username].find(c => c.id === chatId);
     if (!chat) {
         return res.status(404).json({ error: 'Chat not found' });
     }
