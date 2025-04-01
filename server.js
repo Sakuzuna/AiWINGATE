@@ -434,7 +434,7 @@ app.post('/upload', upload.single('file'), async (req, res) => {
             const message = `${prompt}\n\nImage content (base64): ${base64Image.substring(0, 1000)}...`;
 
             response = await axios.post('https://api.aimlapi.com/v1/chat/completions', {
-                model: 'x-ai/grok-beta',
+                model: 'gemini-2.0-flash-thinking-exp-01-21',
                 messages: [{ role: 'user', content: message }],
                 max_tokens: 512,
                 temperature: 0.7,
