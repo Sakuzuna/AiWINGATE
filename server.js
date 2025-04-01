@@ -353,95 +353,24 @@ app.post('/cleanup-ai-page', (req, res) => {
     res.sendStatus(200);
 });
 
-// Updated /generate endpoint with corrected model names
+// Updated /generate endpoint: Optimized for speed, DeepSeek removed
 app.post('/generate', async (req, res) => {
     const { message } = req.body;
     if (!message) {
         return res.status(400).json({ error: 'No message provided' });
     }
 
-    const gptApiKey = process.env.GPT_API_KEY;
-    const deepseekApiKey = process.env.DEEPSEEK_API_KEY;
-    const geminiApiKey = process.env.GEMINI_API_KEY;
     const llamaApiKey = process.env.LLAMA_API_KEY;
 
-    if (!gptApiKey || !deepseekApiKey || !geminiApiKey || !llamaApiKey) {
-        return res.status(500).json({ error: 'Server configuration error: One or more API keys missing' });
+    if (!llamaApiKey) {
+        return res.status(500).json({ error: 'Server configuration error: Llama API key missing' });
     }
 
     try {
-        // Concurrently fetch responses from GPT-4.5-preview, DeepSeek R1, and Gemini-1.5-pro via AIML API
-        const [gptResponse, deepseekResponse, geminiResponse] = await Promise.all([
-            axios.post('https://api.aimlapi.com/v1/chat/completions', {
-                model: 'gpt-4.5-preview',
-                messages: [{ role: 'user', content: message }],
-                max_tokens: 512,
-                temperature: 0.7,
-            }, {
-                headers: {
-                    'Authorization': `Bearer ${gptApiKey}`,
-                    'Content-Type': 'application/json'
-                }
-            }).catch(err => {
-                console.error('GPT Error:', err.response?.data || err.message);
-                return { data: { choices: [{ message: { content: 'GPT-4.5 failed to respond' } }] } };
-            }),
-
-            axios.post('https://api.aimlapi.com/v1/chat/completions', {
-                model: 'deepseek/deepseek-r1',
-                messages: [{ role: 'user', content: message }],
-                max_tokens: 512,
-                temperature: 0.7,
-            }, {
-                headers: {
-                    'Authorization': `Bearer ${deepseekApiKey}`,
-                    'Content-Type': 'application/json'
-                }
-            }).catch(err => {
-                console.error('DeepSeek Error:', err.response?.data || err.message);
-                return { data: { choices: [{ message: { content: 'DeepSeek failed to respond' } }] } };
-            }),
-
-            axios.post('https://api.aimlapi.com/v1/chat/completions', {
-                model: 'gemini-1.5-pro',
-                messages: [{ role: 'user', content: message }],
-                max_tokens: 512,
-                temperature: 0.7,
-            }, {
-                headers: {
-                    'Authorization': `Bearer ${geminiApiKey}`,
-                    'Content-Type': 'application/json'
-                }
-            }).catch(err => {
-                console.error('Gemini Error:', err.response?.data || err.message);
-                return { data: { choices: [{ message: { content: 'Gemini failed to respond' } }] } };
-            }),
-        ]);
-
-        // Extract responses
-        const gptText = gptResponse.data.choices?.[0]?.message?.content || 'No valid response from GPT';
-        const deepseekText = deepseekResponse.data.choices?.[0]?.message?.content || 'No valid response from DeepSeek';
-        const geminiText = geminiResponse.data.choices?.[0]?.message?.content || 'No valid response from Gemini';
-
-        // Log the intermediate responses for debugging
-        console.log('GPT Response:', gptText);
-        console.log('DeepSeek Response:', deepseekText);
-        console.log('Gemini Response:', geminiText);
-
-        // Construct prompt for Llama
-        const llamaPrompt = `
-Hello llama ai here i have generated responses from other ai can you combine these responses and generate me a response combined with all these responses with out saying at the beginning for example "Sure i will combine these responses.." e.t.c just the combined response nothing else here is the responses from other ai's
-
-responses:
-GPT-4.5-preview: ${gptText}
-DeepSeek R1: ${deepseekText}
-Gemini-1.5-pro: ${geminiText}
-`;
-
-        // Call Meta-Llama-3.1-405B-Instruct-Turbo
+        // Directly call Llama for the response to minimize latency
         const llamaResponse = await axios.post('https://api.aimlapi.com/v1/chat/completions', {
             model: 'meta-llama/Meta-Llama-3.1-405B-Instruct-Turbo',
-            messages: [{ role: 'user', content: llamaPrompt }],
+            messages: [{ role: 'user', content: message }],
             max_tokens: 512,
             temperature: 0.7,
         }, {
@@ -449,9 +378,6 @@ Gemini-1.5-pro: ${geminiText}
                 'Authorization': `Bearer ${llamaApiKey}`,
                 'Content-Type': 'application/json'
             }
-        }).catch(err => {
-            console.error('Llama Error:', err.response?.data || err.message);
-            return { data: { choices: [{ message: { content: 'Llama failed to combine responses. Original query: ' + message } }] } };
         });
 
         const finalAnswer = llamaResponse.data.choices?.[0]?.message?.content || 'No valid response from Llama';
@@ -462,16 +388,15 @@ Gemini-1.5-pro: ${geminiText}
     }
 });
 
-// Existing /upload endpoint (unchanged)
+// Updated /upload endpoint: DeepSeek removed, using Llama for both text and images
 app.post('/upload', upload.single('file'), async (req, res) => {
     if (!req.file) {
         return res.status(400).json({ error: 'No file uploaded' });
     }
 
     const llamaApiKey = process.env.LLAMA_API_KEY;
-    const deepseekApiKey = process.env.DEEPSEEK_API_KEY;
 
-    if (!llamaApiKey || !deepseekApiKey) {
+    if (!llamaApiKey) {
         return res.status(500).json({ error: 'Server configuration error: API key missing' });
     }
 
@@ -479,7 +404,6 @@ app.post('/upload', upload.single('file'), async (req, res) => {
     const fileContent = req.file.buffer;
     const prompt = req.body.prompt || 'Analyze this file';
 
-    // Define text and image extensions
     const textExtensions = ['.txt', '.rtf', '.doc', '.docx', '.odt', '.pdf', '.md', '.tex', '.html', '.htm', '.xml', '.json', '.yaml', '.yml', '.csv', '.sql', '.ini', '.properties', '.env', '.toml'];
     const imageExtensions = ['.jpg', '.png'];
 
@@ -505,19 +429,18 @@ app.post('/upload', upload.single('file'), async (req, res) => {
                 }
             });
         } else if (isImageFile) {
-            // Handle images with DeepSeek
-            // AIML API might not support direct image binary input; we'll assume it accepts a base64-encoded string or text description
+            // Handle images with Llama (vision-capable model)
             const base64Image = fileContent.toString('base64');
             const message = `${prompt}\n\nImage content (base64): ${base64Image.substring(0, 1000)}...`;
 
             response = await axios.post('https://api.aimlapi.com/v1/chat/completions', {
-                model: 'deepseek/deepseek-r1',
+                model: 'meta-llama/Llama-3.2-11B-Vision-Instruct-Turbo',
                 messages: [{ role: 'user', content: message }],
                 max_tokens: 512,
                 temperature: 0.7,
             }, {
                 headers: {
-                    'Authorization': `Bearer ${deepseekApiKey}`,
+                    'Authorization': `Bearer ${llamaApiKey}`,
                     'Content-Type': 'application/json'
                 }
             });
