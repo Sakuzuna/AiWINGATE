@@ -283,7 +283,7 @@
             sound.play().catch(error => {
                 console.error('Error playing sound:', error);
             });
-            loadChats();
+            initializeChat();
         });
 
         const randomString = window.location.pathname.split('/').pop();
@@ -320,13 +320,19 @@
 
         sendButton.addEventListener('click', () => {
             const prompt = promptInput.value.trim();
-            if ((prompt || attachedFile) && currentChatId) {
-                sendMessage(prompt, attachedFile);
-                promptInput.value = '';
-                attachedFile = null;
-                fileStatus.textContent = '';
-                fileInput.value = '';
+            if (!currentChatId) {
+                alert('Please create or select a chat to send a message.');
+                return;
             }
+            if (!prompt && !attachedFile) {
+                alert('Please enter a message or attach a file.');
+                return;
+            }
+            sendMessage(prompt, attachedFile);
+            promptInput.value = '';
+            attachedFile = null;
+            fileStatus.textContent = '';
+            fileInput.value = '';
         });
 
         newChatButton.addEventListener('click', async () => {
@@ -370,13 +376,48 @@
 
         chatSelect.addEventListener('change', () => {
             currentChatId = chatSelect.value;
-            loadChatMessages();
+            if (currentChatId) {
+                loadChatMessages();
+            } else {
+                chatBox.innerHTML = '';
+            }
         });
+
+        async function initializeChat() {
+            try {
+                const response = await fetch(`/get-chats?randomString=${randomString}`);
+                const userChats = await response.json();
+                if (!response.ok) {
+                    throw new Error(userChats.error || 'Failed to load chats');
+                }
+                if (userChats.length === 0) {
+                    // Automatically create a new chat if none exist
+                    const createResponse = await fetch('/create-chat', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ randomString })
+                    });
+                    const createResult = await createResponse.json();
+                    if (createResult.chatId) {
+                        currentChatId = createResult.chatId;
+                    } else {
+                        throw new Error(createResult.error || 'Failed to create initial chat');
+                    }
+                }
+                loadChats();
+            } catch (error) {
+                console.error('Error initializing chat:', error);
+                alert('Failed to initialize chat. Please try again.');
+            }
+        }
 
         async function loadChats() {
             try {
                 const response = await fetch(`/get-chats?randomString=${randomString}`);
                 const userChats = await response.json();
+                if (!response.ok) {
+                    throw new Error(userChats.error || 'Failed to load chats');
+                }
                 chatSelect.innerHTML = '<option value="">Select a chat</option>';
                 userChats.forEach(chat => {
                     const option = document.createElement('option');
@@ -388,9 +429,13 @@
                     currentChatId = userChats[0].id;
                     chatSelect.value = currentChatId;
                     loadChatMessages();
+                } else if (currentChatId) {
+                    chatSelect.value = currentChatId;
+                    loadChatMessages();
                 }
             } catch (error) {
                 console.error('Error loading chats:', error);
+                alert('Failed to load chats. Please try again.');
             }
         }
 
@@ -440,6 +485,7 @@
                 }
             } catch (error) {
                 console.error('Error loading messages:', error);
+                alert('Failed to load messages. Please try again.');
             }
         }
 
