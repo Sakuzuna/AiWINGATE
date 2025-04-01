@@ -434,7 +434,7 @@ app.post('/upload', upload.single('file'), async (req, res) => {
             const message = `${prompt}\n\nImage content (base64): ${base64Image.substring(0, 1000)}...`;
 
             response = await axios.post('https://api.aimlapi.com/v1/chat/completions', {
-                model: 'meta-llama/Llama-3.2-11B-Vision-Instruct-Turbo',
+                model: 'x-ai/grok-beta',
                 messages: [{ role: 'user', content: message }],
                 max_tokens: 512,
                 temperature: 0.7,
