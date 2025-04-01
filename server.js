@@ -369,7 +369,7 @@ app.post('/generate', async (req, res) => {
     try {
         // Directly call Llama for the response to minimize latency
         const llamaResponse = await axios.post('https://api.aimlapi.com/v1/chat/completions', {
-            model: 'meta-llama/Meta-Llama-3.1-405B-Instruct-Turbo',
+            model: 'deepseek/deepseek-chat',
             messages: [{ role: 'user', content: message }],
             max_tokens: 512,
             temperature: 0.7,
@@ -418,7 +418,7 @@ app.post('/upload', upload.single('file'), async (req, res) => {
             const message = `${prompt}\n\nFile content:\n${textContent.substring(0, 1000)}...`;
 
             response = await axios.post('https://api.aimlapi.com/v1/chat/completions', {
-                model: 'meta-llama/Meta-Llama-3.1-405B-Instruct-Turbo',
+                model: 'gpt-4o-2024-05-13',
                 messages: [{ role: 'user', content: message }],
                 max_tokens: 512,
                 temperature: 0.7,
