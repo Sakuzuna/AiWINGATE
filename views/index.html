@@ -23,30 +23,34 @@
             position: fixed;
             top: 15px;
             left: 15px;
-            background: #ffffff;
-            color: #3e4684;
-            border: 2px solid #3e4684;
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
+            background: linear-gradient(45deg, #3e4684, #5a66b8);
+            color: #ffffff;
+            border: none;
+            border-radius: 8px;
+            width: 45px;
+            height: 45px;
             display: flex;
             align-items: center;
             justify-content: center;
             cursor: pointer;
             z-index: 1001;
-            font-size: 20px;
-            transition: background 0.3s, color 0.3s;
+            font-size: 22px;
+            transition: left 0.3s ease, background 0.3s;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+
+        .menu-toggle.open {
+            left: 265px; /* Move to the right when sidebar is open */
         }
 
         .menu-toggle:hover {
-            background: #3e4684;
-            color: #ffffff;
+            background: linear-gradient(45deg, #5a66b8, #3e4684);
         }
 
         .sidebar {
             position: fixed;
             top: 0;
-            left: -250px;
+            left: -260px; /* Completely hidden when closed */
             width: 250px;
             height: 100vh;
             background: #f1f7fe;
@@ -98,7 +102,7 @@
         .chat-header {
             text-align: center;
             padding: 10px;
-            background: #ffffff; /* Changed to white */
+            background: #ffffff;
             color: #3e4684;
             box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
         }
@@ -136,7 +140,7 @@
             background: #e6e9f9;
             margin-left: auto;
             text-align: right;
-            display: inline-block; /* Fit content */
+            display: inline-block;
             max-width: 80%;
         }
 
@@ -293,7 +297,7 @@
 </head>
 <body>
     <!-- Menu Toggle Button -->
-    <button class="menu-toggle" onclick="toggleMenu()">☰</button>
+    <button id="menu-toggle" class="menu-toggle" onclick="toggleMenu()">☰</button>
 
     <!-- Sliding Menu -->
     <div class="sidebar" id="sidebar">
@@ -330,7 +334,9 @@
         // Menu Toggle
         function toggleMenu() {
             const sidebar = document.getElementById('sidebar');
+            const menuToggle = document.getElementById('menu-toggle');
             sidebar.classList.toggle('open');
+            menuToggle.classList.toggle('open');
         }
 
         window.addEventListener('load', () => {
@@ -365,15 +371,13 @@
             const newFiles = Array.from(e.target.files);
             if (newFiles.length === 0) return;
 
-            // Check total number of files
             if (attachedFiles.length + newFiles.length > 10) {
                 alert('You can only attach up to 10 files.');
                 return;
             }
 
-            // Check total size
             const totalSize = [...attachedFiles, ...newFiles].reduce((sum, file) => sum + file.size, 0);
-            const maxSize = 150 * 1024 * 1024; // 150MB in bytes
+            const maxSize = 150 * 1024 * 1024;
             if (totalSize > maxSize) {
                 alert('Total file size exceeds 150MB limit.');
                 return;
