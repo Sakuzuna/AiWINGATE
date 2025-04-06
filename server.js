@@ -92,6 +92,28 @@ function cleanupAuthPage(randomString) {
     }
 }
 
+// Function to format AI response
+function formatResponse(text) {
+    let formatted = text;
+
+    // Convert ### to <h1> titles
+    formatted = formatted.replace(/###\s*(.+)/g, '<h1>$1</h1>');
+
+    // Convert ## to <h2> with uppercase
+    formatted = formatted.replace(/##\s*(.+)/g, '<h2 style="text-transform: uppercase;">$1</h2>');
+
+    // Convert **text** to bold
+    formatted = formatted.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+
+    // Split by periods and wrap in paragraphs, preserving other formatting
+    formatted = formatted.split('.').map(segment => segment.trim() ? `<p>${segment}.</p>` : '').join('');
+
+    // Convert lines starting with - to bullet points
+    formatted = formatted.replace(/<p>- (.+?)<\/p>/g, '<ul><li>$1</li></ul>');
+
+    return formatted;
+}
+
 // Root route: Check cookie or IP for authentication
 app.get('/', (req, res) => {
     const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
@@ -353,7 +375,7 @@ app.post('/cleanup-ai-page', (req, res) => {
     res.sendStatus(200);
 });
 
-// Updated /generate endpoint: Optimized for speed, DeepSeek removed
+// Updated /generate endpoint with formatted response
 app.post('/generate', async (req, res) => {
     const { message } = req.body;
     if (!message) {
@@ -367,7 +389,6 @@ app.post('/generate', async (req, res) => {
     }
 
     try {
-        // Directly call Llama for the response to minimize latency
         const llamaResponse = await axios.post('https://api.aimlapi.com/v1/chat/completions', {
             model: 'deepseek/deepseek-chat',
             messages: [{ role: 'user', content: message }],
@@ -380,15 +401,16 @@ app.post('/generate', async (req, res) => {
             }
         });
 
-        const finalAnswer = llamaResponse.data.choices?.[0]?.message?.content || 'No valid response from Llama';
-        console.log('Final Llama Response:', finalAnswer);
-        res.json({ answer: finalAnswer });
+        const rawAnswer = llamaResponse.data.choices?.[0]?.message?.content || 'No valid response from Llama';
+        const formattedAnswer = formatResponse(rawAnswer);
+        console.log('Formatted Response:', formattedAnswer);
+        res.json({ answer: formattedAnswer });
     } catch (error) {
         handleError(error, res);
     }
 });
 
-// Updated /upload endpoint: DeepSeek removed, using Llama for both text and images
+// Updated /upload endpoint with formatted response
 app.post('/upload', upload.single('file'), async (req, res) => {
     if (!req.file) {
         return res.status(400).json({ error: 'No file uploaded' });
@@ -413,7 +435,6 @@ app.post('/upload', upload.single('file'), async (req, res) => {
     try {
         let response;
         if (isTextFile) {
-            // Handle text files with Llama
             const textContent = fileContent.toString('utf8');
             const message = `${prompt}\n\nFile content:\n${textContent.substring(0, 1000)}...`;
 
@@ -429,7 +450,6 @@ app.post('/upload', upload.single('file'), async (req, res) => {
                 }
             });
         } else if (isImageFile) {
-            // Handle images with Llama (vision-capable model)
             const base64Image = fileContent.toString('base64');
             const message = `${prompt}\n\nImage content (base64): ${base64Image.substring(0, 1000)}...`;
 
@@ -448,9 +468,10 @@ app.post('/upload', upload.single('file'), async (req, res) => {
             return res.status(400).json({ error: 'Unsupported file type. Please upload a text file or image.' });
         }
 
-        const answer = response.data.choices?.[0]?.message?.content || 'Failed to process file';
-        console.log('Upload Response:', answer);
-        res.json({ answer });
+        const rawAnswer = response.data.choices?.[0]?.message?.content || 'Failed to process file';
+        const formattedAnswer = formatResponse(rawAnswer);
+        console.log('Upload Response:', formattedAnswer);
+        res.json({ answer: formattedAnswer });
     } catch (error) {
         handleError(error, res);
     }
