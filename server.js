@@ -16,12 +16,12 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.static('public'));
 app.use(cookieParser());
 
-// Multer for file uploads (updated to handle multiple files)
+// Multer for file uploads
 const storage = multer.memoryStorage();
 const upload = multer({
     storage: storage,
     limits: {
-        fileSize: 150 * 1024 * 1024, // 150MB limit per file (though we'll check total size separately)
+        fileSize: 150 * 1024 * 1024, // 150MB limit per file
         files: 10 // Maximum 10 files
     }
 });
@@ -102,11 +102,21 @@ function cleanupAuthPage(randomString) {
 function formatResponse(text) {
     let formatted = text;
 
-    // Convert ### to <h1> titles
-    formatted = formatted.replace(/###\s*(.+)/g, '<h1>$1</h1>');
+    // Convert ### to <h1> titles and add line break after colon
+    formatted = formatted.replace(/###\s*(.+?)(:)?/g, (match, title, colon) => {
+        if (colon) {
+            return `<h1>${title}</h1><br>`;
+        }
+        return `<h1>${title}</h1>`;
+    });
 
-    // Convert ## to <h2> with uppercase
-    formatted = formatted.replace(/##\s*(.+)/g, '<h2 style="text-transform: uppercase;">$1</h2>');
+    // Convert ## to <h2> with uppercase and add line break after colon
+    formatted = formatted.replace(/##\s*(.+?)(:)?/g, (match, title, colon) => {
+        if (colon) {
+            return `<h2 style="text-transform: uppercase;">${title}</h2><br>`;
+        }
+        return `<h2 style="text-transform: uppercase;">${title}</h2>`;
+    });
 
     // Convert **text** to bold
     formatted = formatted.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
@@ -381,7 +391,7 @@ app.post('/cleanup-ai-page', (req, res) => {
     res.sendStatus(200);
 });
 
-// Updated /generate endpoint with formatted response
+// /generate endpoint
 app.post('/generate', async (req, res) => {
     const { message } = req.body;
     if (!message) {
@@ -416,15 +426,14 @@ app.post('/generate', async (req, res) => {
     }
 });
 
-// Updated /upload endpoint to handle multiple files
+// /upload endpoint
 app.post('/upload', upload.array('files', 10), async (req, res) => {
     if (!req.files || req.files.length === 0) {
         return res.status(400).json({ error: 'No files uploaded' });
     }
 
-    // Check total file size (150MB = 150 * 1024 * 1024 bytes)
     const totalSize = req.files.reduce((sum, file) => sum + file.size, 0);
-    const maxSize = 150 * 1024 * 1024; // 150MB in bytes
+    const maxSize = 150 * 1024 * 1024;
     if (totalSize > maxSize) {
         return res.status(400).json({ error: 'Total file size exceeds 150MB limit' });
     }
