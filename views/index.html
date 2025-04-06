@@ -18,18 +18,29 @@
             flex-direction: column;
         }
 
-        /* Sliding Menu */
+        /* Menu Toggle Button */
         .menu-toggle {
             position: fixed;
-            top: 10px;
-            left: 10px;
-            background: #3e4684;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            padding: 8px;
+            top: 15px;
+            left: 15px;
+            background: #ffffff;
+            color: #3e4684;
+            border: 2px solid #3e4684;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             cursor: pointer;
             z-index: 1001;
+            font-size: 20px;
+            transition: background 0.3s, color 0.3s;
+        }
+
+        .menu-toggle:hover {
+            background: #3e4684;
+            color: #ffffff;
         }
 
         .sidebar {
@@ -87,8 +98,8 @@
         .chat-header {
             text-align: center;
             padding: 10px;
-            background: #3e4684;
-            color: white;
+            background: #ffffff; /* Changed to white */
+            color: #3e4684;
             box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
         }
 
@@ -118,7 +129,6 @@
             padding: 15px;
             margin: 10px;
             border-radius: 10px;
-            max-width: 80%;
             word-wrap: break-word;
         }
 
@@ -126,6 +136,8 @@
             background: #e6e9f9;
             margin-left: auto;
             text-align: right;
+            display: inline-block; /* Fit content */
+            max-width: 80%;
         }
 
         .message.ai {
@@ -135,6 +147,7 @@
             display: flex;
             flex-direction: column;
             gap: 10px;
+            max-width: 80%;
         }
 
         .message-content {
@@ -199,13 +212,57 @@
             font-size: 12px;
         }
 
-        .input-area {
-            display: flex;
-            align-items: center;
+        .input-container {
             padding: 10px;
             background: #f1f7fe;
             border-top: 1px solid #e6e9f9;
             box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.05);
+        }
+
+        .attached-files {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 10px;
+            padding: 10px;
+            background: #e6e9f9;
+            border-radius: 10px;
+            max-height: 100px;
+            overflow-y: auto;
+        }
+
+        .attached-file {
+            display: flex;
+            align-items: center;
+            background: #ffffff;
+            padding: 5px 10px;
+            border-radius: 15px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            font-size: 14px;
+            color: #4d4d4d;
+        }
+
+        .attached-file span {
+            margin-right: 10px;
+        }
+
+        .remove-file-btn {
+            background: #d63333;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .input-area {
+            display: flex;
+            align-items: center;
         }
 
         .input-area input[type="text"] {
@@ -254,11 +311,14 @@
             <span class="ai-name">Wingate AI</span>
         </div>
         <div id="chat-box" class="chat-box"></div>
-        <div class="input-area">
-            <button id="upload-btn">🗀</button>
-            <input type="text" id="prompt" placeholder="Type your message...">
-            <input type="file" id="file-upload" accept=".txt,.rtf,.doc,.docx,.odt,.pdf,.md,.tex,.html,.htm,.xml,.json,.yaml,.yml,.csv,.sql,.ini,.properties,.env,.toml,.jpg,.png" style="display: none;">
-            <button id="send">Send</button>
+        <div class="input-container">
+            <div id="attached-files" class="attached-files" style="display: none;"></div>
+            <div class="input-area">
+                <button id="upload-btn">🗀</button>
+                <input type="text" id="prompt" placeholder="Type your message...">
+                <input type="file" id="file-upload" accept=".txt,.rtf,.doc,.docx,.odt,.pdf,.md,.tex,.html,.htm,.xml,.json,.yaml,.yml,.csv,.sql,.ini,.properties,.env,.toml,.jpg,.png" multiple style="display: none;">
+                <button id="send">Send</button>
+            </div>
         </div>
     </div>
 
@@ -291,26 +351,62 @@
         const sendButton = document.getElementById('send');
         const uploadButton = document.getElementById('upload-btn');
         const fileInput = document.getElementById('file-upload');
+        const attachedFilesContainer = document.getElementById('attached-files');
         const chatSelect = document.getElementById('chat-select');
         const newChatButton = document.getElementById('new-chat-btn');
         const signoutButton = document.getElementById('signout-btn');
-        let attachedFile = null;
+        let attachedFiles = [];
         let messageCounter = 0;
         let currentChatId = null;
 
         uploadButton.addEventListener('click', () => fileInput.click());
 
         fileInput.addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (file) {
-                attachedFile = file;
-                promptInput.placeholder = `Attached: ${file.name}`;
-                promptInput.focus();
-            } else {
-                attachedFile = null;
-                promptInput.placeholder = 'Type your message...';
+            const newFiles = Array.from(e.target.files);
+            if (newFiles.length === 0) return;
+
+            // Check total number of files
+            if (attachedFiles.length + newFiles.length > 10) {
+                alert('You can only attach up to 10 files.');
+                return;
             }
+
+            // Check total size
+            const totalSize = [...attachedFiles, ...newFiles].reduce((sum, file) => sum + file.size, 0);
+            const maxSize = 150 * 1024 * 1024; // 150MB in bytes
+            if (totalSize > maxSize) {
+                alert('Total file size exceeds 150MB limit.');
+                return;
+            }
+
+            attachedFiles = [...attachedFiles, ...newFiles];
+            updateAttachedFilesUI();
+            promptInput.focus();
         });
+
+        function updateAttachedFilesUI() {
+            attachedFilesContainer.innerHTML = '';
+            if (attachedFiles.length === 0) {
+                attachedFilesContainer.style.display = 'none';
+                return;
+            }
+
+            attachedFilesContainer.style.display = 'flex';
+            attachedFiles.forEach((file, index) => {
+                const fileElement = document.createElement('div');
+                fileElement.className = 'attached-file';
+                fileElement.innerHTML = `
+                    <span>${file.name}</span>
+                    <button class="remove-file-btn" onclick="removeFile(${index})">×</button>
+                `;
+                attachedFilesContainer.appendChild(fileElement);
+            });
+        }
+
+        window.removeFile = (index) => {
+            attachedFiles.splice(index, 1);
+            updateAttachedFilesUI();
+        };
 
         sendButton.addEventListener('click', () => {
             const prompt = promptInput.value.trim();
@@ -318,14 +414,14 @@
                 alert('Please create or select a chat to send a message.');
                 return;
             }
-            if (!prompt && !attachedFile) {
+            if (!prompt && attachedFiles.length === 0) {
                 alert('Please enter a message or attach a file.');
                 return;
             }
-            sendMessage(prompt, attachedFile);
+            sendMessage(prompt, attachedFiles);
             promptInput.value = '';
-            attachedFile = null;
-            promptInput.placeholder = 'Type your message...';
+            attachedFiles = [];
+            updateAttachedFilesUI();
             fileInput.value = '';
         });
 
@@ -482,16 +578,17 @@
             }
         }
 
-        async function sendMessage(prompt, file) {
+        async function sendMessage(prompt, files) {
             messageCounter++;
             const messageId = `message-${messageCounter}`;
 
-            if (file) {
-                chatBox.innerHTML += `<div class="message user">Attached file: ${file.name}</div>`;
+            if (files.length > 0) {
+                const fileNames = files.map(file => file.name).join(', ');
+                chatBox.innerHTML += `<div class="message user">Attached files: ${fileNames}</div>`;
                 await fetch('/save-message', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ chatId: currentChatId, message: `Attached file: ${file.name}`, isUser: true, randomString })
+                    body: JSON.stringify({ chatId: currentChatId, message: `Attached files: ${fileNames}`, isUser: true, randomString })
                 });
 
                 if (prompt) {
@@ -505,8 +602,8 @@
                 chatBox.scrollTop = chatBox.scrollHeight;
 
                 const formData = new FormData();
-                formData.append('file', file);
-                formData.append('prompt', prompt || 'Analyze this file');
+                files.forEach(file => formData.append('files', file));
+                formData.append('prompt', prompt || 'Analyze these files');
 
                 try {
                     const response = await fetch('/upload', {
