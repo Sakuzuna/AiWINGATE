@@ -16,9 +16,15 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.static('public'));
 app.use(cookieParser());
 
-// Multer for file uploads
+// Multer for file uploads (updated to handle multiple files)
 const storage = multer.memoryStorage();
-const upload = multer({ storage: storage });
+const upload = multer({
+    storage: storage,
+    limits: {
+        fileSize: 150 * 1024 * 1024, // 150MB limit per file (though we'll check total size separately)
+        files: 10 // Maximum 10 files
+    }
+});
 
 // In-memory store for active pages and sessions
 const activeAiPages = new Map(); // Key: randomString, Value: { timeout, username }
@@ -410,10 +416,17 @@ app.post('/generate', async (req, res) => {
     }
 });
 
-// Updated /upload endpoint with formatted response
-app.post('/upload', upload.single('file'), async (req, res) => {
-    if (!req.file) {
-        return res.status(400).json({ error: 'No file uploaded' });
+// Updated /upload endpoint to handle multiple files
+app.post('/upload', upload.array('files', 10), async (req, res) => {
+    if (!req.files || req.files.length === 0) {
+        return res.status(400).json({ error: 'No files uploaded' });
+    }
+
+    // Check total file size (150MB = 150 * 1024 * 1024 bytes)
+    const totalSize = req.files.reduce((sum, file) => sum + file.size, 0);
+    const maxSize = 150 * 1024 * 1024; // 150MB in bytes
+    if (totalSize > maxSize) {
+        return res.status(400).json({ error: 'Total file size exceeds 150MB limit' });
     }
 
     const llamaApiKey = process.env.LLAMA_API_KEY;
@@ -422,54 +435,59 @@ app.post('/upload', upload.single('file'), async (req, res) => {
         return res.status(500).json({ error: 'Server configuration error: API key missing' });
     }
 
-    const fileName = req.file.originalname.toLowerCase();
-    const fileContent = req.file.buffer;
-    const prompt = req.body.prompt || 'Analyze this file';
-
+    const prompt = req.body.prompt || 'Analyze these files';
     const textExtensions = ['.txt', '.rtf', '.doc', '.docx', '.odt', '.pdf', '.md', '.tex', '.html', '.htm', '.xml', '.json', '.yaml', '.yml', '.csv', '.sql', '.ini', '.properties', '.env', '.toml'];
     const imageExtensions = ['.jpg', '.png'];
 
-    const isTextFile = textExtensions.some(ext => fileName.endsWith(ext));
-    const isImageFile = imageExtensions.some(ext => fileName.endsWith(ext));
-
     try {
-        let response;
-        if (isTextFile) {
-            const textContent = fileContent.toString('utf8');
-            const message = `${prompt}\n\nFile content:\n${textContent.substring(0, 1000)}...`;
+        let combinedResponse = '';
+        for (const file of req.files) {
+            const fileName = file.originalname.toLowerCase();
+            const fileContent = file.buffer;
 
-            response = await axios.post('https://api.aimlapi.com/v1/chat/completions', {
-                model: 'gpt-4o-2024-05-13',
-                messages: [{ role: 'user', content: message }],
-                max_tokens: 512,
-                temperature: 0.7,
-            }, {
-                headers: {
-                    'Authorization': `Bearer ${llamaApiKey}`,
-                    'Content-Type': 'application/json'
-                }
-            });
-        } else if (isImageFile) {
-            const base64Image = fileContent.toString('base64');
-            const message = `${prompt}\n\nImage content (base64): ${base64Image.substring(0, 1000)}...`;
+            const isTextFile = textExtensions.some(ext => fileName.endsWith(ext));
+            const isImageFile = imageExtensions.some(ext => fileName.endsWith(ext));
 
-            response = await axios.post('https://api.aimlapi.com/v1/chat/completions', {
-                model: 'gemini-2.0-flash-thinking-exp-01-21',
-                messages: [{ role: 'user', content: message }],
-                max_tokens: 512,
-                temperature: 0.7,
-            }, {
-                headers: {
-                    'Authorization': `Bearer ${llamaApiKey}`,
-                    'Content-Type': 'application/json'
-                }
-            });
-        } else {
-            return res.status(400).json({ error: 'Unsupported file type. Please upload a text file or image.' });
+            let response;
+            if (isTextFile) {
+                const textContent = fileContent.toString('utf8');
+                const message = `${prompt}\n\nFile: ${fileName}\nContent:\n${textContent.substring(0, 1000)}...`;
+
+                response = await axios.post('https://api.aimlapi.com/v1/chat/completions', {
+                    model: 'gpt-4o-2024-05-13',
+                    messages: [{ role: 'user', content: message }],
+                    max_tokens: 512,
+                    temperature: 0.7,
+                }, {
+                    headers: {
+                        'Authorization': `Bearer ${llamaApiKey}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+            } else if (isImageFile) {
+                const base64Image = fileContent.toString('base64');
+                const message = `${prompt}\n\nFile: ${fileName}\nImage content (base64): ${base64Image.substring(0, 1000)}...`;
+
+                response = await axios.post('https://api.aimlapi.com/v1/chat/completions', {
+                    model: 'gemini-2.0-flash-thinking-exp-01-21',
+                    messages: [{ role: 'user', content: message }],
+                    max_tokens: 512,
+                    temperature: 0.7,
+                }, {
+                    headers: {
+                        'Authorization': `Bearer ${llamaApiKey}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+            } else {
+                return res.status(400).json({ error: `Unsupported file type for ${fileName}. Please upload a text file or image.` });
+            }
+
+            const rawAnswer = response.data.choices?.[0]?.message?.content || `Failed to process file ${fileName}`;
+            combinedResponse += `### Analysis for ${fileName}\n${rawAnswer}\n\n`;
         }
 
-        const rawAnswer = response.data.choices?.[0]?.message?.content || 'Failed to process file';
-        const formattedAnswer = formatResponse(rawAnswer);
+        const formattedAnswer = formatResponse(combinedResponse);
         console.log('Upload Response:', formattedAnswer);
         res.json({ answer: formattedAnswer });
     } catch (error) {
