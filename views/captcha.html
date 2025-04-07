@@ -98,7 +98,7 @@
 <body>
     <div class="captcha-container">
         <h2>Captcha Verification</h2>
-        <div class="timer" id="timer">Time left: 8s</div>
+        <div class="timer" id="timer">Time left: 15s</div>
         <div class="captcha-code-container">
             <div id="captcha-code" class="captcha-code"></div>
             <button class="copy-btn" onclick="copyCaptchaCode()">Copy</button>
@@ -110,7 +110,7 @@
 
     <script>
         let captchaCode = '';
-        let timeLeft = 8;
+        let timeLeft = 15;
         let lastMouseX = null;
         let lastMouseY = null;
         let straightLineStart = null;
@@ -159,11 +159,11 @@
             const dx = x - lastMouseX;
             const dy = y - lastMouseY;
 
-            // Check if movement is roughly in a straight line (small angle change)
-            if (Math.abs(dx) > 5 || Math.abs(dy) > 5) {
+            // Check if movement is roughly in a straight line (less sensitive)
+            if (Math.abs(dx) > 10 || Math.abs(dy) > 10) {
                 if (straightLineStart === null) {
                     straightLineStart = Date.now();
-                } else if (Date.now() - straightLineStart > 1000) {
+                } else if (Date.now() - straightLineStart > 2000) { // 2 seconds instead of 1
                     window.location.href = 'https://www.google.com/';
                 }
             } else {
@@ -175,19 +175,17 @@
         }
 
         function detectVPNorProxy() {
-            // Basic fingerprinting: Check for suspicious navigator properties
             const suspicious = (
-                navigator.webdriver || // Webdriver detection (common in bots)
-                !navigator.languages.length || // No languages set
-                window.outerWidth === 0 || window.outerHeight === 0 || // Headless browser
-                performance.navigation.type === 2 // Frequent redirects
+                navigator.webdriver ||
+                !navigator.languages.length ||
+                window.outerWidth === 0 || window.outerHeight === 0 ||
+                performance.navigation.type === 2
             );
 
             if (suspicious) {
                 window.location.href = 'https://www.google.com/';
             }
 
-            // Additional check: Timezone mismatch or unusual screen size
             const timezoneOffset = new Date().getTimezoneOffset();
             const screenSize = `${window.screen.width}x${window.screen.height}`;
             const commonResolutions = ['1920x1080', '1366x768', '1440x900', '1280x720'];
@@ -200,21 +198,21 @@
             captchaCode = generateCaptcha();
             document.getElementById('captcha-code').textContent = captchaCode;
 
-            // 8-second timeout
+            // Start 15-second timer
             setInterval(updateTimer, 1000);
 
-            // Refresh CAPTCHA every 3 seconds
-            setInterval(refreshCaptcha, 3000);
+            // Refresh CAPTCHA every 5 seconds (independent of timer)
+            setInterval(refreshCaptcha, 5000);
 
             // Initial VPN/proxy detection
             detectVPNorProxy();
 
-            // Check if mouse moves at all within 5 seconds
+            // Check for no mouse movement after 10 seconds (more lenient)
             setTimeout(() => {
                 if (!hasMoved) {
                     window.location.href = 'https://www.google.com/';
                 }
-            }, 5000);
+            }, 10000);
         };
 
         document.addEventListener('mousemove', (e) => {
