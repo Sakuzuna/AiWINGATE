@@ -102,6 +102,12 @@ function cleanupAuthPage(randomString) {
 function formatResponse(text) {
     let formatted = text;
 
+    // Handle code blocks (```language\ncode\n```)
+    formatted = formatted.replace(/```(\w+)?\n([\s\S]*?)\n```/g, (match, language, code) => {
+        // Only the code goes into a code block
+        return `<pre class="code-block"><code>${code.trim()}</code></pre>`;
+    });
+
     // Convert ### to <h1> titles and add line break after colon
     formatted = formatted.replace(/###\s*(.+?)(:)?/g, (match, title, colon) => {
         if (colon) {
@@ -118,11 +124,20 @@ function formatResponse(text) {
         return `<h2 style="text-transform: uppercase;">${title}</h2>`;
     });
 
-    // Convert **text** to bold
-    formatted = formatted.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    // Convert **text** to small, bold text
+    formatted = formatted.replace(/\*\*(.+?)\*\*/g, '<span style="font-size: 0.9em; font-weight: bold;">$1</span>');
+
+    // Convert *text* to italic
+    formatted = formatted.replace(/\*(.+?)\*/g, '<em>$1</em>');
+
+    // Convert _text_ to italic
+    formatted = formatted.replace(/_(.+?)_/g, '<em>$1</em>');
 
     // Split by periods and wrap in paragraphs, preserving other formatting
-    formatted = formatted.split('.').map(segment => segment.trim() ? `<p>${segment}.</p>` : '').join('');
+    formatted = formatted.split(/(?<!\w)\.(?!\w)/).map(segment => {
+        segment = segment.trim();
+        return segment ? `<p>${segment}.</p>` : '';
+    }).join('');
 
     // Convert lines starting with - to bullet points
     formatted = formatted.replace(/<p>- (.+?)<\/p>/g, '<ul><li>$1</li></ul>');
