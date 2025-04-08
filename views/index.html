@@ -40,7 +40,7 @@
         }
 
         .menu-toggle.open {
-            left: 275px; /* Increased to ensure no overlap with sidebar + 10px gap */
+            left: 275px;
         }
 
         .menu-toggle:hover {
@@ -50,7 +50,7 @@
         .sidebar {
             position: fixed;
             top: 0;
-            left: -280px; /* Increased to fully hide the sidebar when closed */
+            left: -280px;
             width: 250px;
             height: 100vh;
             background: #f1f7fe;
@@ -81,6 +81,14 @@
             background: white;
             color: #4d4d4d;
             border: 1px solid #e6e9f9;
+        }
+
+        .sidebar .image-mode-btn {
+            background: #4CAF50;
+        }
+
+        .sidebar .text-mode-btn {
+            background: #3e4684;
         }
 
         .signout-btn {
@@ -160,14 +168,23 @@
 
         .message.ai h1 {
             font-size: 24px;
+            font-weight: bold;
             margin: 10px 0;
             color: #3e4684;
         }
 
         .message.ai h2 {
             font-size: 18px;
+            font-weight: bold;
             margin: 8px 0;
             color: #4d4d4d;
+        }
+
+        .message.ai h3 {
+            font-size: 16px;
+            font-weight: bold;
+            margin: 6px 0;
+            color: #5a66b8;
         }
 
         .message.ai span[style*="font-weight: bold"] {
@@ -297,6 +314,8 @@
         <select id="chat-select">
             <option value="">Select a chat</option>
         </select>
+        <button id="image-mode-btn" class="image-mode-btn" onclick="setMode('image')">Image Generator</button>
+        <button id="text-mode-btn" class="text-mode-btn" onclick="setMode('text')">Text Generator</button>
         <button class="signout-btn" id="signout-btn">Sign Out</button>
     </div>
 
@@ -356,6 +375,7 @@
         let attachedFiles = [];
         let messageCounter = 0;
         let currentChatId = null;
+        let currentMode = 'text'; // Default mode is text generation
 
         uploadButton.addEventListener('click', () => fileInput.click());
 
@@ -469,6 +489,21 @@
             }
         });
 
+        function setMode(mode) {
+            currentMode = mode;
+            const imageBtn = document.getElementById('image-mode-btn');
+            const textBtn = document.getElementById('text-mode-btn');
+            if (mode === 'image') {
+                imageBtn.style.background = '#4CAF50';
+                textBtn.style.background = '#3e4684';
+                promptInput.placeholder = 'Enter a prompt to generate an image...';
+            } else {
+                imageBtn.style.background = '#3e4684';
+                textBtn.style.background = '#4CAF50';
+                promptInput.placeholder = 'Type your message...';
+            }
+        }
+
         async function initializeChat() {
             try {
                 const response = await fetch(`/get-chats?randomString=${randomString}`);
@@ -535,6 +570,7 @@
                         messageCounter++;
                         const messageId = `message-${messageCounter}`;
                         const hasCode = msg.content.includes('<pre class="code-block">');
+                        const hasImage = msg.content.includes('<img');
                         let messageHtml;
 
                         if (msg.isUser) {
@@ -546,6 +582,11 @@
                                     <div class="button-container">
                                         <button class="copy-btn" onclick="copyToClipboard('${messageId}')">Copy</button>
                                     </div>
+                                </div>`;
+                        } else if (hasImage) {
+                            messageHtml = `
+                                <div class="message ai">
+                                    <div class="message-content">${msg.content}</div>
                                 </div>`;
                         } else {
                             messageHtml = `
@@ -652,14 +693,16 @@
                 chatBox.scrollTop = chatBox.scrollHeight;
 
                 try {
-                    const response = await fetch('/generate', {
+                    const endpoint = currentMode === 'image' ? '/generate-image' : '/generate';
+                    const response = await fetch(endpoint, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ message: prompt })
+                        body: JSON.stringify(currentMode === 'image' ? { prompt } : { message: prompt })
                     });
                     const result = await response.json();
                     const aiMessage = result.answer || result.error || 'Error';
                     const hasCode = aiMessage.includes('<pre class="code-block">');
+                    const hasImage = aiMessage.includes('<img');
                     let messageHtml;
 
                     if (hasCode) {
@@ -669,6 +712,11 @@
                                 <div class="button-container">
                                     <button class="copy-btn" onclick="copyToClipboard('${messageId}')">Copy</button>
                                 </div>
+                            </div>`;
+                    } else if (hasImage) {
+                        messageHtml = `
+                            <div class="message ai">
+                                <div class="message-content">${aiMessage}</div>
                             </div>`;
                     } else {
                         messageHtml = `
