@@ -102,36 +102,31 @@ function cleanupAuthPage(randomString) {
 function formatResponse(text) {
     let formatted = text;
 
-    // Handle code blocks (```language\ncode\n```)
+    // Handle code blocks (```language\ncode\n``` or ```\ncode\n```)
     formatted = formatted.replace(/```(\w+)?\n([\s\S]*?)\n```/g, (match, language, code) => {
-        // Only the code goes into a code block
         return `<pre class="code-block"><code>${code.trim()}</code></pre>`;
     });
 
-    // Convert ### to <h1> titles and add line break after colon
+    // Convert ### to <h1> (large bold headings)
     formatted = formatted.replace(/###\s*(.+?)(:)?/g, (match, title, colon) => {
-        if (colon) {
-            return `<h1>${title}</h1><br>`;
-        }
-        return `<h1>${title}</h1>`;
+        return colon ? `<h1>${title}</h1><br>` : `<h1>${title}</h1>`;
     });
 
-    // Convert ## to <h2> with uppercase and add line break after colon
+    // Convert ## to <h2> (medium bold headings, uppercase)
     formatted = formatted.replace(/##\s*(.+?)(:)?/g, (match, title, colon) => {
-        if (colon) {
-            return `<h2 style="text-transform: uppercase;">${title}</h2><br>`;
-        }
-        return `<h2 style="text-transform: uppercase;">${title}</h2>`;
+        return colon ? `<h2 style="text-transform: uppercase;">${title}</h2><br>` : `<h2 style="text-transform: uppercase;">${title}</h2>`;
+    });
+
+    // Convert # to <h3> (slightly smaller bold headings)
+    formatted = formatted.replace(/#\s*(.+?)(:)?/g, (match, title, colon) => {
+        return colon ? `<h3>${title}</h3><br>` : `<h3>${title}</h3>`;
     });
 
     // Convert **text** to small, bold text
     formatted = formatted.replace(/\*\*(.+?)\*\*/g, '<span style="font-size: 0.9em; font-weight: bold;">$1</span>');
 
-    // Convert *text* to italic
-    formatted = formatted.replace(/\*(.+?)\*/g, '<em>$1</em>');
-
-    // Convert _text_ to italic
-    formatted = formatted.replace(/_(.+?)_/g, '<em>$1</em>');
+    // Convert *text* or _text_ to italic
+    formatted = formatted.replace(/[_\*](.+?)[_\*]/g, '<em>$1</em>');
 
     // Split by periods and wrap in paragraphs, preserving other formatting
     formatted = formatted.split(/(?<!\w)\.(?!\w)/).map(segment => {
@@ -154,16 +149,12 @@ app.get('/', (req, res) => {
     if (sessionToken && sessions.has(sessionToken)) {
         const username = sessions.get(sessionToken);
         const randomString = generateRandomString();
-        const timeout = setTimeout(() => {
-            cleanupAiPage(randomString);
-        }, INACTIVITY_TIMEOUT);
+        const timeout = setTimeout(() => cleanupAiPage(randomString), INACTIVITY_TIMEOUT);
         activeAiPages.set(randomString, { timeout, username });
         res.redirect(`/ai/${randomString}`);
     } else if (passedIps.has(clientIp)) {
         const randomString = generateRandomString();
-        const timeout = setTimeout(() => {
-            cleanupAuthPage(randomString);
-        }, INACTIVITY_TIMEOUT);
+        const timeout = setTimeout(() => cleanupAuthPage(randomString), INACTIVITY_TIMEOUT);
         activeAuthPages.set(randomString, { timeout });
         res.redirect(`/auth/${randomString}`);
     } else {
@@ -181,16 +172,12 @@ app.get('/captcha/:randomString', (req, res) => {
     if (sessionToken && sessions.has(sessionToken)) {
         const username = sessions.get(sessionToken);
         const randomString = generateRandomString();
-        const timeout = setTimeout(() => {
-            cleanupAiPage(randomString);
-        }, INACTIVITY_TIMEOUT);
+        const timeout = setTimeout(() => cleanupAiPage(randomString), INACTIVITY_TIMEOUT);
         activeAiPages.set(randomString, { timeout, username });
         res.redirect(`/ai/${randomString}`);
     } else if (passedIps.has(clientIp)) {
         const randomString = generateRandomString();
-        const timeout = setTimeout(() => {
-            cleanupAuthPage(randomString);
-        }, INACTIVITY_TIMEOUT);
+        const timeout = setTimeout(() => cleanupAuthPage(randomString), INACTIVITY_TIMEOUT);
         activeAuthPages.set(randomString, { timeout });
         res.redirect(`/auth/${randomString}`);
     } else {
@@ -209,9 +196,7 @@ app.get('/auth/:randomString', (req, res) => {
     }
 
     clearTimeout(activeAuthPages.get(randomString).timeout);
-    const timeout = setTimeout(() => {
-        cleanupAuthPage(randomString);
-    }, INACTIVITY_TIMEOUT);
+    const timeout = setTimeout(() => cleanupAuthPage(randomString), INACTIVITY_TIMEOUT);
     activeAuthPages.set(randomString, { timeout });
 
     res.sendFile(path.join(__dirname, 'views', 'auth.html'));
@@ -228,9 +213,7 @@ app.get('/ai/:randomString', (req, res) => {
     }
 
     clearTimeout(activeAiPages.get(randomString).timeout);
-    const timeout = setTimeout(() => {
-        cleanupAiPage(randomString);
-    }, INACTIVITY_TIMEOUT);
+    const timeout = setTimeout(() => cleanupAiPage(randomString), INACTIVITY_TIMEOUT);
     activeAiPages.set(randomString, { timeout, username: activeAiPages.get(randomString).username });
 
     res.sendFile(path.join(__dirname, 'views', 'index.html'));
@@ -243,9 +226,7 @@ app.post('/register-ai-page', (req, res) => {
     console.log(`IP ${clientIp} passed the captcha`);
 
     const randomString = generateRandomString();
-    const timeout = setTimeout(() => {
-        cleanupAuthPage(randomString);
-    }, INACTIVITY_TIMEOUT);
+    const timeout = setTimeout(() => cleanupAuthPage(randomString), INACTIVITY_TIMEOUT);
     activeAuthPages.set(randomString, { timeout });
     res.json({ randomString });
 });
@@ -264,9 +245,7 @@ app.post('/signup', (req, res) => {
     console.log(`Saved credentials: ${username}:${hashedPassword}`);
 
     const randomString = generateRandomString();
-    const timeout = setTimeout(() => {
-        cleanupAiPage(randomString);
-    }, INACTIVITY_TIMEOUT);
+    const timeout = setTimeout(() => cleanupAiPage(randomString), INACTIVITY_TIMEOUT);
     const sessionToken = generateSessionToken();
     sessions.set(sessionToken, username);
     activeAiPages.set(randomString, { timeout, username });
@@ -291,9 +270,7 @@ app.post('/login', (req, res) => {
 
     if (userEntry) {
         const randomString = generateRandomString();
-        const timeout = setTimeout(() => {
-            cleanupAiPage(randomString);
-        }, INACTIVITY_TIMEOUT);
+        const timeout = setTimeout(() => cleanupAiPage(randomString), INACTIVITY_TIMEOUT);
         const sessionToken = generateSessionToken();
         sessions.set(sessionToken, username);
         activeAiPages.set(randomString, { timeout, username });
@@ -406,7 +383,7 @@ app.post('/cleanup-ai-page', (req, res) => {
     res.sendStatus(200);
 });
 
-// /generate endpoint
+// /generate endpoint (text generation)
 app.post('/generate', async (req, res) => {
     const { message } = req.body;
     if (!message) {
@@ -414,7 +391,6 @@ app.post('/generate', async (req, res) => {
     }
 
     const llamaApiKey = process.env.LLAMA_API_KEY;
-
     if (!llamaApiKey) {
         return res.status(500).json({ error: 'Server configuration error: Llama API key missing' });
     }
@@ -434,15 +410,58 @@ app.post('/generate', async (req, res) => {
 
         const rawAnswer = llamaResponse.data.choices?.[0]?.message?.content || 'No valid response from Llama';
         const formattedAnswer = formatResponse(rawAnswer);
-        console.log('Formatted Response:', formattedAnswer);
         res.json({ answer: formattedAnswer });
     } catch (error) {
         handleError(error, res);
     }
 });
 
+// /generate-image endpoint (image generation)
+app.post('/generate-image', async (req, res) => {
+    const { prompt } = req.body;
+    if (!prompt) {
+        return res.status(400).json({ error: 'No prompt provided' });
+    }
+
+    const fluxApiKey = process.env.FLUX_API_KEY;
+    if (!fluxApiKey) {
+        return res.status(500).json({ error: 'Server configuration error: Flux API key missing' });
+    }
+
+    try {
+        const fluxResponse = await axios.post('https://api.aimlapi.com/v1/images/generations', {
+            model: 'flux-pro/v1.1-ultra',
+            prompt: prompt,
+            width: 1024,
+            height: 1024,
+            num_outputs: 1,
+            quality: 90,
+        }, {
+            headers: {
+                'Authorization': `Bearer ${fluxApiKey}`,
+                'Content-Type': 'application/json'
+            }
+        });
+
+        const imageUrl = fluxResponse.data.data?.[0]?.url;
+        if (!imageUrl) {
+            throw new Error('No image URL returned from Flux API');
+        }
+
+        // Return HTML to embed the image in the chat
+        const formattedResponse = `
+            <p>Generated Image:</p>
+            <img src="${imageUrl}" alt="Generated Image" style="max-width: 100%; border-radius: 10px;">
+            <a href="${imageUrl}" download="generated-image.jpg" style="display: inline-block; padding: 5px 10px; background: #3e4684; color: white; text-decoration: none; border-radius: 5px; margin-top: 10px;">Download</a>
+        `;
+        res.json({ answer: formattedResponse });
+    } catch (error) {
+        handleError(error, res);
+    }
+});
+
 // /upload endpoint
-app.post('/upload', upload.array('files', 10), async (req, res) => {
+app.post('/upload', async (req, res) => {
     if (!req.files || req.files.length === 0) {
         return res.status(400).json({ error: 'No files uploaded' });
     }
@@ -454,7 +473,6 @@ app.post('/upload', upload.array('files', 10), async (req, res) => {
     }
 
     const llamaApiKey = process.env.LLAMA_API_KEY;
-
     if (!llamaApiKey) {
         return res.status(500).json({ error: 'Server configuration error: API key missing' });
     }
@@ -512,7 +530,6 @@ app.post('/upload', upload.array('files', 10), async (req, res) => {
         }
 
         const formattedAnswer = formatResponse(combinedResponse);
-        console.log('Upload Response:', formattedAnswer);
         res.json({ answer: formattedAnswer });
     } catch (error) {
         handleError(error, res);
