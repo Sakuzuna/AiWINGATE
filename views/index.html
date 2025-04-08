@@ -170,8 +170,12 @@
             color: #4d4d4d;
         }
 
-        .message.ai strong {
-            font-weight: 700;
+        .message.ai span[style*="font-weight: bold"] {
+            font-size: 0.9em;
+        }
+
+        .message.ai em {
+            font-style: italic;
         }
 
         .message.ai ul {
@@ -188,22 +192,9 @@
             color: #d4d4d4;
             padding: 10px;
             border-radius: 5px;
-            position: relative;
             margin-top: 5px;
             font-family: 'Courier New', Courier, monospace;
             white-space: pre-wrap;
-        }
-
-        .code-block-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background: #333;
-            padding: 5px 10px;
-            border-top-left-radius: 5px;
-            border-top-right-radius: 5px;
-            color: white;
-            font-size: 12px;
         }
 
         .code-block .copy-btn {
@@ -214,6 +205,7 @@
             border-radius: 5px;
             cursor: pointer;
             font-size: 12px;
+            margin-left: 10px;
         }
 
         .input-container {
@@ -542,26 +534,18 @@
                     chat.messages.forEach(msg => {
                         messageCounter++;
                         const messageId = `message-${messageCounter}`;
-                        const isCode = msg.content.includes('```');
+                        const hasCode = msg.content.includes('<pre class="code-block">');
                         let messageHtml;
 
                         if (msg.isUser) {
                             messageHtml = `<div class="message user">${msg.content}</div>`;
-                        } else if (isCode) {
-                            const codeContent = msg.content.replace(/```[\s\S]*?```/g, (match) => {
-                                const code = match.replace(/```/g, '').trim();
-                                return `
-                                    <div class="code-block">
-                                        <div class="code-block-header">
-                                            <span>Code</span>
-                                            <button class="copy-btn" onclick="copyToClipboard('${messageId}-code')">Copy</button>
-                                        </div>
-                                        <pre id="${messageId}-code">${code}</pre>
-                                    </div>`;
-                            });
+                        } else if (hasCode) {
                             messageHtml = `
                                 <div class="message ai">
-                                    <div class="message-content">${codeContent}</div>
+                                    <div class="message-content">${msg.content}</div>
+                                    <div class="button-container">
+                                        <button class="copy-btn" onclick="copyToClipboard('${messageId}')">Copy</button>
+                                    </div>
                                 </div>`;
                         } else {
                             messageHtml = `
@@ -616,24 +600,16 @@
                     });
                     const result = await response.json();
                     const aiMessage = result.answer || result.error || 'Error';
-                    const isCode = aiMessage.includes('```');
+                    const hasCode = aiMessage.includes('<pre class="code-block">');
                     let messageHtml;
 
-                    if (isCode) {
-                        const codeContent = aiMessage.replace(/```[\s\S]*?```/g, (match) => {
-                            const code = match.replace(/```/g, '').trim();
-                            return `
-                                <div class="code-block">
-                                    <div class="code-block-header">
-                                        <span>Code</span>
-                                        <button class="copy-btn" onclick="copyToClipboard('${messageId}-code')">Copy</button>
-                                    </div>
-                                    <pre id="${messageId}-code">${code}</pre>
-                                </div>`;
-                        });
+                    if (hasCode) {
                         messageHtml = `
                             <div class="message ai">
-                                <div class="message-content">${codeContent}</div>
+                                <div class="message-content">${aiMessage}</div>
+                                <div class="button-container">
+                                    <button class="copy-btn" onclick="copyToClipboard('${messageId}')">Copy</button>
+                                </div>
                             </div>`;
                     } else {
                         messageHtml = `
@@ -683,24 +659,16 @@
                     });
                     const result = await response.json();
                     const aiMessage = result.answer || result.error || 'Error';
-                    const isCode = aiMessage.includes('```');
+                    const hasCode = aiMessage.includes('<pre class="code-block">');
                     let messageHtml;
 
-                    if (isCode) {
-                        const codeContent = aiMessage.replace(/```[\s\S]*?```/g, (match) => {
-                            const code = match.replace(/```/g, '').trim();
-                            return `
-                                <div class="code-block">
-                                    <div class="code-block-header">
-                                        <span>Code</span>
-                                        <button class="copy-btn" onclick="copyToClipboard('${messageId}-code')">Copy</button>
-                                    </div>
-                                    <pre id="${messageId}-code">${code}</pre>
-                                </div>`;
-                        });
+                    if (hasCode) {
                         messageHtml = `
                             <div class="message ai">
-                                <div class="message-content">${codeContent}</div>
+                                <div class="message-content">${aiMessage}</div>
+                                <div class="button-container">
+                                    <button class="copy-btn" onclick="copyToClipboard('${messageId}')">Copy</button>
+                                </div>
                             </div>`;
                     } else {
                         messageHtml = `
