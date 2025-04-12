@@ -588,14 +588,6 @@
 
                         if (msg.isUser) {
                             messageHtml = `<div class="message user">${sanitize(msg.content)}</div>`;
-                        } else if (hasCode) {
-                            messageHtml = `
-                                <div class="message ai">
-                                    <div class="message-content">${msg.content}</div>
-                                    <div class="button-container">
-                                        <button class="copy-btn" onclick="copyToClipboard('${messageId}')">Copy</button>
-                                    </div>
-                                </div>`;
                         } else if (hasImage) {
                             messageHtml = `
                                 <div class="message ai">
@@ -663,23 +655,13 @@
                     const hasCode = aiMessage.includes('<pre class="code-block">');
                     let messageHtml;
 
-                    if (hasCode) {
-                        messageHtml = `
-                            <div class="message ai">
-                                <div class="message-content">${aiMessage}</div>
-                                <div class="button-container">
-                                    <button class="copy-btn" onclick="copyToClipboard('${messageId}')">Copy</button>
-                                </div>
-                            </div>`;
-                    } else {
-                        messageHtml = `
-                            <div class="message ai">
-                                <div id="${messageId}" class="message-content">${aiMessage}</div>
-                                <div class="button-container">
-                                    <button class="copy-btn" onclick="copyToClipboard('${messageId}')">Copy</button>
-                                </div>
-                            </div>`;
-                    }
+                    messageHtml = `
+                        <div class="message ai">
+                            <div id="${messageId}" class="message-content">${aiMessage}</div>
+                            <div class="button-container">
+                                <button class="copy-btn" onclick="copyToClipboard('${messageId}')">Copy</button>
+                            </div>
+                        </div>`;
                     chatBox.innerHTML += messageHtml;
                     await fetch('/save-message', {
                         method: 'POST',
@@ -724,28 +706,13 @@
                     const hasImage = aiMessage.includes('<img');
                     let messageHtml;
 
-                    if (hasCode) {
-                        messageHtml = `
-                            <div class="message ai">
-                                <div class="message-content">${aiMessage}</div>
-                                <div class="button-container">
-                                    <button class="copy-btn" onclick="copyToClipboard('${messageId}')">Copy</button>
-                                </div>
-                            </div>`;
-                    } else if (hasImage) {
-                        messageHtml = `
-                            <div class="message ai">
-                                <div class="message-content">${aiMessage}</div>
-                            </div>`;
-                    } else {
-                        messageHtml = `
-                            <div class="message ai">
-                                <div id="${messageId}" class="message-content">${aiMessage}</div>
-                                <div class="button-container">
-                                    <button class="copy-btn" onclick="copyToClipboard('${messageId}')">Copy</button>
-                                </div>
-                            </div>`;
-                    }
+                    messageHtml = `
+                        <div class="message ai">
+                            <div id="${messageId}" class="message-content">${aiMessage}</div>
+                            <div class="button-container">
+                                <button class="copy-btn" onclick="copyToClipboard('${messageId}')">Copy</button>
+                            </div>
+                        </div>`;
                     chatBox.innerHTML += messageHtml;
                     await fetch('/save-message', {
                         method: 'POST',
