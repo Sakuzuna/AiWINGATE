@@ -128,10 +128,15 @@ function formatResponse(text) {
     // Convert *text* or _text_ to italic
     formatted = formatted.replace(/[_\*](.+?)[_\*]/g, '<em>$1</em>');
 
-    // Split by periods and wrap in paragraphs, preserving other formatting
-    formatted = formatted.split(/(?<!\w)\.(?!\w)/).map(segment => {
+    // Split by periods, but preserve existing HTML tags
+    formatted = formatted.replace(/(?<!<\/?\w+[^>]*>)\.(?=\s|$)/g, '.<br>'); // Add <br> after periods not inside HTML tags
+    formatted = formatted.split('<br>').map(segment => {
         segment = segment.trim();
-        return segment ? `<p>${segment}.</p>` : '';
+        // Only wrap in <p> if the segment doesn't already contain HTML tags
+        if (segment && !segment.match(/^<.*>$/)) {
+            return `<p>${segment}</p>`;
+        }
+        return segment;
     }).join('');
 
     // Convert lines starting with - to bullet points
@@ -429,13 +434,14 @@ app.post('/generate-image', async (req, res) => {
     }
 
     try {
-        const fluxResponse = await axios.post('https://api.aimlapi.com/v1/images/generations', {
+        const fluxResponse = await axios.post('https://api.aimlapi.com/generate', {
             model: 'flux-pro/v1.1-ultra',
             prompt: prompt,
             width: 1024,
             height: 1024,
-            num_outputs: 1,
-            quality: 90,
+            steps: 50,
+            cfg_scale: 7.5,
+            output_format: 'jpeg'
         }, {
             headers: {
                 'Authorization': `Bearer ${fluxApiKey}`,
@@ -443,7 +449,7 @@ app.post('/generate-image', async (req, res) => {
             }
         });
 
-        const imageUrl = fluxResponse.data.data?.[0]?.url;
+        const imageUrl = fluxResponse.data.image_url;
         if (!imageUrl) {
             throw new Error('No image URL returned from Flux API');
         }
