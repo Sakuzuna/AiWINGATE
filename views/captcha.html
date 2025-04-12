@@ -88,17 +88,11 @@
             font-size: 0.9em;
             display: none;
         }
-
-        .timer {
-            font-size: 0.9em;
-            color: #4d4d4d;
-        }
     </style>
 </head>
 <body>
     <div class="captcha-container">
         <h2>Captcha Verification</h2>
-        <div class="timer" id="timer">Time left: 15s</div>
         <div class="captcha-code-container">
             <div id="captcha-code" class="captcha-code"></div>
             <button class="copy-btn" onclick="copyCaptchaCode()">Copy</button>
@@ -110,11 +104,6 @@
 
     <script>
         let captchaCode = '';
-        let timeLeft = 15;
-        let lastMouseX = null;
-        let lastMouseY = null;
-        let straightLineStart = null;
-        let hasMoved = false;
 
         function generateCaptcha() {
             const length = Math.floor(Math.random() * (25 - 15 + 1)) + 15;
@@ -134,90 +123,10 @@
             });
         }
 
-        function updateTimer() {
-            const timerElement = document.getElementById('timer');
-            timerElement.textContent = `Time left: ${timeLeft}s`;
-            if (timeLeft <= 0) {
-                window.location.href = 'https://www.google.com/';
-            }
-            timeLeft--;
-        }
-
-        function refreshCaptcha() {
-            captchaCode = generateCaptcha();
-            document.getElementById('captcha-code').textContent = captchaCode;
-        }
-
-        function detectStraightLine(x, y) {
-            if (lastMouseX === null || lastMouseY === null) {
-                lastMouseX = x;
-                lastMouseY = y;
-                return;
-            }
-
-            hasMoved = true;
-            const dx = x - lastMouseX;
-            const dy = y - lastMouseY;
-
-            // Check if movement is roughly in a straight line (less sensitive)
-            if (Math.abs(dx) > 10 || Math.abs(dy) > 10) {
-                if (straightLineStart === null) {
-                    straightLineStart = Date.now();
-                } else if (Date.now() - straightLineStart > 2000) { // 2 seconds instead of 1
-                    window.location.href = 'https://www.google.com/';
-                }
-            } else {
-                straightLineStart = null;
-            }
-
-            lastMouseX = x;
-            lastMouseY = y;
-        }
-
-        function detectVPNorProxy() {
-            const suspicious = (
-                navigator.webdriver ||
-                !navigator.languages.length ||
-                window.outerWidth === 0 || window.outerHeight === 0 ||
-                performance.navigation.type === 2
-            );
-
-            if (suspicious) {
-                window.location.href = 'https://www.google.com/';
-            }
-
-            const timezoneOffset = new Date().getTimezoneOffset();
-            const screenSize = `${window.screen.width}x${window.screen.height}`;
-            const commonResolutions = ['1920x1080', '1366x768', '1440x900', '1280x720'];
-            if (timezoneOffset === 0 && !commonResolutions.includes(screenSize)) {
-                window.location.href = 'https://www.google.com/';
-            }
-        }
-
         window.onload = () => {
             captchaCode = generateCaptcha();
             document.getElementById('captcha-code').textContent = captchaCode;
-
-            // Start 15-second timer
-            setInterval(updateTimer, 1000);
-
-            // Refresh CAPTCHA every 5 seconds (independent of timer)
-            setInterval(refreshCaptcha, 5000);
-
-            // Initial VPN/proxy detection
-            detectVPNorProxy();
-
-            // Check for no mouse movement after 10 seconds (more lenient)
-            setTimeout(() => {
-                if (!hasMoved) {
-                    window.location.href = 'https://www.google.com/';
-                }
-            }, 10000);
         };
-
-        document.addEventListener('mousemove', (e) => {
-            detectStraightLine(e.clientX, e.clientY);
-        });
 
         async function verifyCaptcha() {
             const userInput = document.getElementById('captcha-input').value.trim();
