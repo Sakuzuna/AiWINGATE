@@ -139,7 +139,7 @@
 
         .message {
             padding: 15px;
-            margin: 10px;
+            margin: 10px 0;
             border-radius: 10px;
             word-wrap: break-word;
         }
@@ -168,22 +168,22 @@
 
         .message.ai h1 {
             font-size: 24px;
-            font-weight: bold;
-            margin: 10px 0;
+            font-weight: 700;
+            margin: 15px 0 10px;
             color: #3e4684;
         }
 
         .message.ai h2 {
             font-size: 18px;
-            font-weight: bold;
-            margin: 8px 0;
+            font-weight: 700;
+            margin: 12px 0 8px;
             color: #4d4d4d;
         }
 
         .message.ai h3 {
             font-size: 16px;
-            font-weight: bold;
-            margin: 6px 0;
+            font-weight: 700;
+            margin: 10px 0 6px;
             color: #5a66b8;
         }
 
@@ -201,17 +201,23 @@
         }
 
         .message.ai p {
-            margin: 5px 0;
+            margin: 8px 0;
+            line-height: 1.5;
         }
 
         .code-block {
             background: #1e1e1e;
             color: #d4d4d4;
-            padding: 10px;
+            padding: 15px;
             border-radius: 5px;
-            margin-top: 5px;
+            margin: 10px 0;
             font-family: 'Courier New', Courier, monospace;
             white-space: pre-wrap;
+            overflow-x: auto;
+        }
+
+        .code-block code {
+            display: block;
         }
 
         .code-block .copy-btn {
@@ -222,7 +228,7 @@
             border-radius: 5px;
             cursor: pointer;
             font-size: 12px;
-            margin-left: 10px;
+            margin-top: 5px;
         }
 
         .input-container {
@@ -259,7 +265,7 @@
             margin-right: 10px;
         }
 
-        .remove-file-btn {
+        .attached-file .remove-file-btn {
             background: #d63333;
             color: white;
             border: none;
