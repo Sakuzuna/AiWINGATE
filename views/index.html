@@ -148,7 +148,6 @@
             background: #e6e9f9;
             margin-left: auto;
             text-align: right;
-            display: inline-block;
             max-width: 80%;
         }
 
@@ -156,10 +155,10 @@
             background: #f1f7fe;
             margin-right: auto;
             text-align: left;
+            max-width: 80%;
             display: flex;
             flex-direction: column;
             gap: 10px;
-            max-width: 80%;
         }
 
         .message-content {
@@ -167,37 +166,35 @@
         }
 
         .message.ai h1 {
-            font-size: 24px;
+            font-size: 1.5em;
             font-weight: 700;
-            margin: 20px 0 10px;
+            margin: 15px 0 10px;
             color: #3e4684;
         }
 
         .message.ai h2 {
-            font-size: 18px;
-            font-weight: 700;
-            margin: 15px 0 8px;
+            font-size: 1.25em;
+            font-weight: 600;
+            margin: 12px 0 8px;
             color: #4d4d4d;
+            text-transform: uppercase;
         }
 
         .message.ai h3 {
-            font-size: 16px;
-            font-weight: 700;
-            margin: 12px 0 6px;
+            font-size: 1.1em;
+            font-weight: 600;
+            margin: 10px 0 6px;
             color: #5a66b8;
         }
 
-        .message.ai span[style*="font-weight: bold"] {
-            font-size: 0.9em;
-        }
-
-        .message.ai em {
-            font-style: italic;
+        .message.ai p {
+            margin: 8px 0;
+            line-height: 1.6;
         }
 
         .message.ai ul {
-            margin: 10px 0;
-            padding-left: 25px;
+            margin: 8px 0;
+            padding-left: 20px;
             list-style-type: disc;
         }
 
@@ -206,9 +203,13 @@
             line-height: 1.5;
         }
 
-        .message.ai p {
-            margin: 10px 0;
-            line-height: 1.6;
+        .message.ai strong {
+            font-weight: 700;
+            font-size: 0.95em;
+        }
+
+        .message.ai em {
+            font-style: italic;
         }
 
         .code-block {
@@ -586,7 +587,7 @@
                         let messageHtml;
 
                         if (msg.isUser) {
-                            messageHtml = `<div class="message user">${msg.content}</div>`;
+                            messageHtml = `<div class="message user">${sanitize(msg.content)}</div>`;
                         } else if (hasCode) {
                             messageHtml = `
                                 <div class="message ai">
@@ -619,13 +620,19 @@
             }
         }
 
+        function sanitize(html) {
+            const div = document.createElement('div');
+            div.textContent = html;
+            return div.innerHTML;
+        }
+
         async function sendMessage(prompt, files) {
             messageCounter++;
             const messageId = `message-${messageCounter}`;
 
             if (files.length > 0) {
                 const fileNames = files.map(file => file.name).join(', ');
-                chatBox.innerHTML += `<div class="message user">Attached files: ${fileNames}</div>`;
+                chatBox.innerHTML += `<div class="message user">Attached files: ${sanitize(fileNames)}</div>`;
                 await fetch('/save-message', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -633,7 +640,7 @@
                 });
 
                 if (prompt) {
-                    chatBox.innerHTML += `<div class="message user">${prompt}</div>`;
+                    chatBox.innerHTML += `<div class="message user">${sanitize(prompt)}</div>`;
                     await fetch('/save-message', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -696,7 +703,7 @@
                 }
                 chatBox.scrollTop = chatBox.scrollHeight;
             } else if (prompt) {
-                chatBox.innerHTML += `<div class="message user">${prompt}</div>`;
+                chatBox.innerHTML += `<div class="message user">${sanitize(prompt)}</div>`;
                 await fetch('/save-message', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
