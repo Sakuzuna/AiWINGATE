@@ -221,6 +221,7 @@
             font-family: 'Courier New', Courier, monospace;
             white-space: pre-wrap;
             overflow-x: auto;
+            position: relative;
         }
 
         .code-block code {
@@ -228,6 +229,24 @@
         }
 
         .code-block .copy-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #3e4684;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: background 0.2s;
+        }
+
+        .code-block .copy-btn:hover {
+            background: #5a66b8;
+        }
+
+        .message-content .copy-btn {
             background: #3e4684;
             color: white;
             border: none;
@@ -236,6 +255,10 @@
             cursor: pointer;
             font-size: 12px;
             margin-top: 5px;
+        }
+
+        .message-content .copy-btn:hover {
+            background: #5a66b8;
         }
 
         .input-container {
@@ -582,6 +605,7 @@
                     chat.messages.forEach(msg => {
                         messageCounter++;
                         const messageId = `message-${messageCounter}`;
+                        const codeId = `code-${messageCounter}`;
                         const hasCode = msg.content.includes('<pre class="code-block">');
                         const hasImage = msg.content.includes('<img');
                         let messageHtml;
@@ -592,6 +616,19 @@
                             messageHtml = `
                                 <div class="message ai">
                                     <div class="message-content">${msg.content}</div>
+                                </div>`;
+                        } else if (hasCode) {
+                            // Replace code block to include copy button
+                            const modifiedContent = msg.content.replace(
+                                /<pre class="code-block"><code>([\s\S]*?)<\/code><\/pre>/g,
+                                `<pre class="code-block"><button class="copy-btn" onclick="copyToClipboard('${codeId}')">Copy</button><code id="${codeId}">$1</code></pre>`
+                            );
+                            messageHtml = `
+                                <div class="message ai">
+                                    <div id="${messageId}" class="message-content">${modifiedContent}</div>
+                                    <div class="button-container">
+                                        <button class="copy-btn" onclick="copyToClipboard('${messageId}')">Copy All</button>
+                                    </div>
                                 </div>`;
                         } else {
                             messageHtml = `
@@ -621,6 +658,7 @@
         async function sendMessage(prompt, files) {
             messageCounter++;
             const messageId = `message-${messageCounter}`;
+            const codeId = `code-${messageCounter}`;
 
             if (files.length > 0) {
                 const fileNames = files.map(file => file.name).join(', ');
@@ -655,13 +693,27 @@
                     const hasCode = aiMessage.includes('<pre class="code-block">');
                     let messageHtml;
 
-                    messageHtml = `
-                        <div class="message ai">
-                            <div id="${messageId}" class="message-content">${aiMessage}</div>
-                            <div class="button-container">
-                                <button class="copy-btn" onclick="copyToClipboard('${messageId}')">Copy</button>
-                            </div>
-                        </div>`;
+                    if (hasCode) {
+                        const modifiedContent = aiMessage.replace(
+                            /<pre class="code-block"><code>([\s\S]*?)<\/code><\/pre>/g,
+                            `<pre class="code-block"><button class="copy-btn" onclick="copyToClipboard('${codeId}')">Copy</button><code id="${codeId}">$1</code></pre>`
+                        );
+                        messageHtml = `
+                            <div class="message ai">
+                                <div id="${messageId}" class="message-content">${modifiedContent}</div>
+                                <div class="button-container">
+                                    <button class="copy-btn" onclick="copyToClipboard('${messageId}')">Copy All</button>
+                                </div>
+                            </div>`;
+                    } else {
+                        messageHtml = `
+                            <div class="message ai">
+                                <div id="${messageId}" class="message-content">${aiMessage}</div>
+                                <div class="button-container">
+                                    <button class="copy-btn" onclick="copyToClipboard('${messageId}')">Copy</button>
+                                </div>
+                            </div>`;
+                    }
                     chatBox.innerHTML += messageHtml;
                     await fetch('/save-message', {
                         method: 'POST',
@@ -706,13 +758,32 @@
                     const hasImage = aiMessage.includes('<img');
                     let messageHtml;
 
-                    messageHtml = `
-                        <div class="message ai">
-                            <div id="${messageId}" class="message-content">${aiMessage}</div>
-                            <div class="button-container">
-                                <button class="copy-btn" onclick="copyToClipboard('${messageId}')">Copy</button>
-                            </div>
-                        </div>`;
+                    if (hasImage) {
+                        messageHtml = `
+                            <div class="message ai">
+                                <div class="message-content">${aiMessage}</div>
+                            </div>`;
+                    } else if (hasCode) {
+                        const modifiedContent = aiMessage.replace(
+                            /<pre class="code-block"><code>([\s\S]*?)<\/code><\/pre>/g,
+                            `<pre class="code-block"><button class="copy-btn" onclick="copyToClipboard('${codeId}')">Copy</button><code id="${codeId}">$1</code></pre>`
+                        );
+                        messageHtml = `
+                            <div class="message ai">
+                                <div id="${messageId}" class="message-content">${modifiedContent}</div>
+                                <div class="button-container">
+                                    <button class="copy-btn" onclick="copyToClipboard('${messageId}')">Copy All</button>
+                                </div>
+                            </div>`;
+                    } else {
+                        messageHtml = `
+                            <div class="message ai">
+                                <div id="${messageId}" class="message-content">${aiMessage}</div>
+                                <div class="button-container">
+                                    <button class="copy-btn" onclick="copyToClipboard('${messageId}')">Copy</button>
+                                </div>
+                            </div>`;
+                    }
                     chatBox.innerHTML += messageHtml;
                     await fetch('/save-message', {
                         method: 'POST',
@@ -740,6 +811,10 @@
 
         function copyToClipboard(elementId) {
             const element = document.getElementById(elementId);
+            if (!element) {
+                console.error(`Element with ID ${elementId} not found`);
+                return;
+            }
             const text = element.textContent;
             navigator.clipboard.writeText(text).then(() => {
                 alert('Copied to clipboard!');
