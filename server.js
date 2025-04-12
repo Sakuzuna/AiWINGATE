@@ -102,54 +102,66 @@ function cleanupAuthPage(randomString) {
 function formatResponse(text) {
     let formatted = text;
 
-    // Step 1: Clean up malformed HTML tags (e.g., stray </h1>)
-    formatted = formatted.replace(/<\/?h[1-3]>/g, '');
+    // Step 1: Clean up any malformed HTML tags
+    formatted = formatted.replace(/<\/?(h[1-3]|p|div|span|strong|em|ul|li|br)\b[^>]*>/gi, '');
 
     // Step 2: Handle code blocks (```language\ncode\n``` or ```\ncode\n```)
     formatted = formatted.replace(/```(\w+)?\n([\s\S]*?)\n```/g, (match, language, code) => {
         return `<pre class="code-block"><code>${code.trim()}</code></pre>`;
     });
 
-    // Step 3: Convert ### to <h1> (large bold headings)
-    formatted = formatted.replace(/###\s*(.+?)(:)?/g, (match, title, colon) => {
-        return colon ? `<h1>${title}</h1><br>` : `<h1>${title}</h1>`;
-    });
+    // Step 3: Convert ### to <h1> (main heading)
+    formatted = formatted.replace(/###\s*(.+)/g, '<h1>$1</h1>');
 
-    // Step 4: Convert ## to <h2> (medium bold headings, uppercase)
-    formatted = formatted.replace(/##\s*(.+?)(:)?/g, (match, title, colon) => {
-        return colon ? `<h2 style="text-transform: uppercase;">${title}</h2><br>` : `<h2 style="text-transform: uppercase;">${title}</h2>`;
-    });
+    // Step 4: Convert ## to <h2> (subheading, uppercase)
+    formatted = formatted.replace(/##\s*(.+)/g, '<h2 style="text-transform: uppercase;">$1</h2>');
 
-    // Step 5: Convert # to <h3> (slightly smaller bold headings)
-    formatted = formatted.replace(/#\s*(.+?)(:)?/g, (match, title, colon) => {
-        return colon ? `<h3>${title}</h3><br>` : `<h3>${title}</h3>`;
-    });
+    // Step 5: Convert # to <h3> (section heading)
+    formatted = formatted.replace(/#\s*(.+)/g, '<h3>$1</h3>');
 
-    // Step 6: Convert **text** to small, bold text
-    formatted = formatted.replace(/\*\*(.+?)\*\*/g, '<span style="font-size: 0.9em; font-weight: bold;">$1</span>');
+    // Step 6: Convert **text** or __text__ to bold
+    formatted = formatted.replace(/(\*\*|__)(.+?)\1/g, '<strong>$2</strong>');
 
     // Step 7: Convert *text* or _text_ to italic
     formatted = formatted.replace(/[_\*](.+?)[_\*]/g, '<em>$1</em>');
 
-    // Step 8: Handle numbered steps (e.g., "1. Step") as headings
-    formatted = formatted.replace(/(\d+\.\s*)(.+?)(?=\n|$)/g, (match, number, title) => {
-        return `<h3>${number}${title}</h3>`;
+    // Step 8: Handle numbered lists (e.g., "1. Step") as headings with bold numbers
+    formatted = formatted.replace(/^(\d+\.\s*)(.+)$/gm, (match, number, title) => {
+        return `<h3><strong>${number}</strong>${title}</h3>`;
     });
 
-    // Step 9: Split text into paragraphs, preserving HTML tags
-    formatted = formatted.replace(/(?<!<\/?\w+[^>]*>)\.(?=\s|$)/g, '.<br>'); // Add <br> after periods not inside HTML tags
-    formatted = formatted.split('<br>').map(segment => {
-        segment = segment.trim();
-        if (segment && !segment.match(/^<.*>$/)) {
-            return `<p>${segment}</p>`;
+    // Step 9: Convert lines starting with - to bullet points
+    let lines = formatted.split('\n');
+    let inList = false;
+    formatted = lines.map(line => {
+        line = line.trim();
+        if (line.startsWith('- ')) {
+            if (!inList) {
+                inList = true;
+                return `<ul><li>${line.slice(2)}</li>`;
+            }
+            return `<li>${line.slice(2)}</li>`;
+        } else if (inList && line) {
+            inList = false;
+            return `</ul><p>${line}</p>`;
+        } else if (line && !line.match(/^<.*>$/)) {
+            return `<p>${line}</p>`;
         }
-        return segment;
+        return line;
     }).join('');
 
-    // Step 10: Convert lines starting with - to bullet points
-    formatted = formatted.replace(/<p>- (.+?)<\/p>/g, '<ul><li>$1</li></ul>');
+    // Close any open <ul> tags
+    if (inList) {
+        formatted += '</ul>';
+    }
 
-    return formatted;
+    // Step 10: Clean up extra newlines and ensure single spacing
+    formatted = formatted.replace(/\n+/g, '\n').replace(/>\n+</g, '><');
+
+    // Step 11: Wrap loose text in paragraphs
+    formatted = formatted.replace(/^(?!<h[1-3]|<p|<ul|<li|<pre)(.+)$/gm, '<p>$1</p>');
+
+    return formatted.trim();
 }
 
 // Root route: Check cookie or IP for authentication
@@ -474,7 +486,7 @@ app.post('/generate-image', async (req, res) => {
 });
 
 // /upload endpoint
-app.post('/upload', async (req, res) => {
+app.post('/upload', upload.array('files'), async (req, res) => {
     if (!req.files || req.files.length === 0) {
         return res.status(400).json({ error: 'No files uploaded' });
     }
@@ -554,17 +566,17 @@ function handleError(error, res) {
         console.error('API error:', error.response.data);
         if (error.response.status === 403 || error.response.status === 429) {
             res.status(error.response.status).json({
-                error: 'API usage limit reached or access denied.'
+                error: 'API usage limit reached or access denied. Please try again later.'
             });
         } else {
-            res.status(error.response.status).json({ error: error.response.data.message || 'Error' });
+            res.status(error.response.status).json({ error: error.response.data.message || 'An error occurred while processing your request.' });
         }
     } else if (error.request) {
         console.error('No response from API:', error.request);
-        res.status(500).json({ error: 'No response from API.' });
+        res.status(500).json({ error: 'Unable to connect to the API. Please check your network and try again.' });
     } else {
         console.error('Error setting up API request:', error.message);
-        res.status(500).json({ error: 'Error setting up request: ' + error.message });
+        res.status(500).json({ error: `An error occurred: ${error.message}` });
     }
 }
 
