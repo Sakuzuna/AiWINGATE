@@ -102,44 +102,51 @@ function cleanupAuthPage(randomString) {
 function formatResponse(text) {
     let formatted = text;
 
-    // Handle code blocks (```language\ncode\n``` or ```\ncode\n```)
+    // Step 1: Clean up malformed HTML tags (e.g., stray </h1>)
+    formatted = formatted.replace(/<\/?h[1-3]>/g, '');
+
+    // Step 2: Handle code blocks (```language\ncode\n``` or ```\ncode\n```)
     formatted = formatted.replace(/```(\w+)?\n([\s\S]*?)\n```/g, (match, language, code) => {
         return `<pre class="code-block"><code>${code.trim()}</code></pre>`;
     });
 
-    // Convert ### to <h1> (large bold headings)
+    // Step 3: Convert ### to <h1> (large bold headings)
     formatted = formatted.replace(/###\s*(.+?)(:)?/g, (match, title, colon) => {
         return colon ? `<h1>${title}</h1><br>` : `<h1>${title}</h1>`;
     });
 
-    // Convert ## to <h2> (medium bold headings, uppercase)
+    // Step 4: Convert ## to <h2> (medium bold headings, uppercase)
     formatted = formatted.replace(/##\s*(.+?)(:)?/g, (match, title, colon) => {
         return colon ? `<h2 style="text-transform: uppercase;">${title}</h2><br>` : `<h2 style="text-transform: uppercase;">${title}</h2>`;
     });
 
-    // Convert # to <h3> (slightly smaller bold headings)
+    // Step 5: Convert # to <h3> (slightly smaller bold headings)
     formatted = formatted.replace(/#\s*(.+?)(:)?/g, (match, title, colon) => {
         return colon ? `<h3>${title}</h3><br>` : `<h3>${title}</h3>`;
     });
 
-    // Convert **text** to small, bold text
+    // Step 6: Convert **text** to small, bold text
     formatted = formatted.replace(/\*\*(.+?)\*\*/g, '<span style="font-size: 0.9em; font-weight: bold;">$1</span>');
 
-    // Convert *text* or _text_ to italic
+    // Step 7: Convert *text* or _text_ to italic
     formatted = formatted.replace(/[_\*](.+?)[_\*]/g, '<em>$1</em>');
 
-    // Split by periods, but preserve existing HTML tags
+    // Step 8: Handle numbered steps (e.g., "1. Step") as headings
+    formatted = formatted.replace(/(\d+\.\s*)(.+?)(?=\n|$)/g, (match, number, title) => {
+        return `<h3>${number}${title}</h3>`;
+    });
+
+    // Step 9: Split text into paragraphs, preserving HTML tags
     formatted = formatted.replace(/(?<!<\/?\w+[^>]*>)\.(?=\s|$)/g, '.<br>'); // Add <br> after periods not inside HTML tags
     formatted = formatted.split('<br>').map(segment => {
         segment = segment.trim();
-        // Only wrap in <p> if the segment doesn't already contain HTML tags
         if (segment && !segment.match(/^<.*>$/)) {
             return `<p>${segment}</p>`;
         }
         return segment;
     }).join('');
 
-    // Convert lines starting with - to bullet points
+    // Step 10: Convert lines starting with - to bullet points
     formatted = formatted.replace(/<p>- (.+?)<\/p>/g, '<ul><li>$1</li></ul>');
 
     return formatted;
